@@ -12,6 +12,7 @@ pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
 
 
+
 def EstimateVAR(data, H):
     """
 
@@ -22,6 +23,8 @@ def EstimateVAR(data, H):
 
     model = sm.VAR(data)
     results = model.fit(maxlags=10, ic='aic')
+    print results.summary()
+    exit()
 
     SIGMA = np.cov(results.resid.T)
     ma_rep = results.ma_rep(maxn=H)
@@ -37,7 +40,6 @@ def EstimateVAR(data, H):
 
     return pd.DataFrame(GVD), SIGMA, ma_rep, results.resid.T
 
-# RunManager
 
 def EstimateVAR_slow():
     df = pd.read_csv('C:/Users/thoru_000/Dropbox/Pers/PyCharmProjects/Speciale/data.csv', sep=";")
@@ -48,11 +50,8 @@ def EstimateVAR_slow():
     model = sm.VAR(data)
     results = model.fit(maxlags=5, ic='aic')
 
-    coeff = results.coefs
     SIGMA = np.cov(results.resid.T)
     ma_rep = results.ma_rep(maxn=10)
-
-    mse = results.mse(10)
 
     GVD = np.zeros_like(SIGMA)
 
@@ -138,14 +137,11 @@ def BootstrapMult(resid, marep, iter):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv('C:/Users/thoru_000/Dropbox/Speciale/Data/thesis-data.csv', sep=",", nrows=1000)
+    df = pd.read_csv('data/thesis-data.csv', sep=",", nrows=100)
     df = df.set_index(pd.to_datetime(df['DATE'] + ' ' + df['TIME']))
     df = df.ix[:, 2:]
     df = np.log(df).diff().dropna()
 
-    sns.distplot(df.values.flatten())
-    plt.show()
-    exit()
     con, sigma, marep, resid = EstimateVAR(df, 4)
     a, b = BootstrapMult(resid, marep, len(df))
     exit()
