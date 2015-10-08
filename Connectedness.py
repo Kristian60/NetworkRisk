@@ -37,12 +37,7 @@ def EstimateVAR(data, H):
 
     return pd.DataFrame(GVD), SIGMA, ma_rep, results.resid.T
 
- # test
-#test223
-# TEST TEST 123
-# 1234
-# fejl tjek
-# asdf asdf
+# RunManager
 
 def EstimateVAR_slow():
     df = pd.read_csv('C:/Users/thoru_000/Dropbox/Pers/PyCharmProjects/Speciale/data.csv', sep=";")
