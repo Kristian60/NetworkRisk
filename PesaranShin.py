@@ -15,7 +15,7 @@ pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
 def Main():
     H=10
-    data = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/Thesis/Data/Index_data.csv",sep=';')
+    data = pd.read_csv("Data/Index_data.csv",sep=';')
     data['Date'] = pd.to_datetime(data['Date'])
     data = data.set_index('Date')
     #data = data[['XLY','XLE','XLP']]

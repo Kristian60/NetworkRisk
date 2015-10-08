@@ -13,8 +13,7 @@ pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
 
 def CoVar():
-    df = pd.read_csv('data.csv', sep=",")
-    df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/Thesis/Data/Index_data.csv",sep=';')
+    df = pd.read_csv("Data/Index_data.csv",sep=';')
     df['Date'] = pd.to_datetime(df['Date'])
     df = df.dropna().ffill().set_index('Date')
     #data = np.log(df).diff().dropna()[['Nordea Bank','Sydbank','Danske Bank','Jyske Bank','Novo Nordisk B']]

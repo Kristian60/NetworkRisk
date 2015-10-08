@@ -30,7 +30,7 @@ def Optim(vals,df,market):
 
 
 def Learn():
-    df = pd.read_csv('data.csv', sep=",")
+    df = pd.read_csv('data/index-data.csv', sep=",")
     df['Date'] = pd.to_datetime(df['Date'])
     df = df.dropna().ffill().set_index('Date')
     data = np.log(df).diff().dropna()[['Sydbank','DSV','Carlsberg B']]
