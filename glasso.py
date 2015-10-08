@@ -14,7 +14,6 @@ def Main():
     cls = 5
     fig1,axs = plt.subplots(rows,cls,figsize=(20,16),facecolor='grey',edgecolor = 'black')
     fig1.subplots_adjust(hspace = .5, wspace=.5)
-
     axs = axs.ravel()
 
     for cc in range(rows*cls):
