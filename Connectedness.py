@@ -12,7 +12,6 @@ pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
 
 
-
 def EstimateVAR(data, H):
     """
 
@@ -23,8 +22,6 @@ def EstimateVAR(data, H):
 
     model = sm.VAR(data)
     results = model.fit(maxlags=10, ic='aic')
-    print results.summary()
-    exit()
 
     SIGMA = np.cov(results.resid.T)
     ma_rep = results.ma_rep(maxn=H)
@@ -103,17 +100,30 @@ def Bootstrap1p(sigma, iter):
 
 
 def BootstrapMult(resid, marep, iter):
-    days = 10
-    responseLength = 5
+    '''
+
+    Ikke færdiggjort.
+    Funktionene skal replikere "iter" perioders afkast af "periods" længde ved at bootstrappe shockvektorer fra
+    "resid"
+
+    :param resid:
+    :param marep:
+    :param iter:
+    :return:
+    '''
+    exit()
+    # Number of periods to simulate, and length of the response to shocks
+    periods = 60 * 7.5  # en dag i minutter
+    responseLength = len(marep) + 1
 
     a_col = np.zeros((iter, marep.shape[-1]))
     b_col = np.zeros((iter, marep.shape[-1]))
 
     for i in range(iter):
-        if i % (iter / 500.0) == 0:
-            print i
-
         shockMatrix = np.array([random.choice(resid.T.values) for x in range(responseLength * 2)])
+        print shockMatrix
+        print shockMatrix.shape
+        exit()
         impulseResponseSystem = marep[::-1]
 
         returnPlaceholder = np.zeros((marep.shape[-1], marep.shape[-1]))
@@ -121,31 +131,28 @@ def BootstrapMult(resid, marep, iter):
         for day in range(days):
             responsePlaceholder = np.zeros((impulseResponseSystem.shape[0], impulseResponseSystem.shape[1]))
             for responsePeriod in range(responseLength):
-
                 shockVector = shockMatrix[responsePeriod + day, :]
                 impulseResponseMatrix = impulseResponseSystem[responsePeriod]
 
                 responsePlaceholder[responsePeriod] = shockVector.dot(impulseResponseMatrix)
-            print pd.DataFrame(shockMatrix)
-            print pd.DataFrame(responsePlaceholder)
-            exit()
 
         a_col[i] = pd.DataFrame(returnPlaceholder + 1).product()
 
-    exit()
     return a_col.flatten(), b_col.flatten()
 
 
 if __name__ == "__main__":
-    df = pd.read_csv('data/thesis-data.csv', sep=",", nrows=100)
+    df = pd.read_csv('data/CRSP_IndexData.csv', sep=",", nrows=10000)
     df = df.set_index(pd.to_datetime(df['DATE'] + ' ' + df['TIME']))
     df = df.ix[:, 2:]
+    df = df.asfreq('1Min')
     df = np.log(df).diff().dropna()
 
-    con, sigma, marep, resid = EstimateVAR(df, 4)
-    a, b = BootstrapMult(resid, marep, len(df))
+    con, sigma, marep, resid = EstimateVAR(df, 15)
+    a, b = BootstrapMult(resid, marep, 1000)
     exit()
-    # Bootstrap1p(sigma,100)
+    Bootstrap1p(sigma, 100)
+    exit()
     df10 = pd.rolling_apply(df, 10, lambda x: np.prod(1 + x) - 1)
     df10 = df10.dropna().values.flatten()
     df10 = df10 - np.mean(df10) + 1
