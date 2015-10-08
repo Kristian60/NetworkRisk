@@ -40,6 +40,7 @@ def EstimateVAR(data, H):
  # test
 #test22
 # NU VIRKER DET
+# NVD
 
 def EstimateVAR_slow():
     df = pd.read_csv('C:/Users/thoru_000/Dropbox/Pers/PyCharmProjects/Speciale/data.csv', sep=";")
