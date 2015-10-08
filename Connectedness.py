@@ -42,6 +42,7 @@ def EstimateVAR(data, H):
 # TEST TEST 123
 # 1234
 # fejl tjek
+# asdf asdf
 
 def EstimateVAR_slow():
     df = pd.read_csv('C:/Users/thoru_000/Dropbox/Pers/PyCharmProjects/Speciale/data.csv', sep=";")
