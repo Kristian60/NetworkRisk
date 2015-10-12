@@ -10,7 +10,11 @@ import seaborn as sns
 import random
 import time
 
+
 t0 = time.time()
+
+print t0
+exit()
 
 pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
@@ -30,6 +34,7 @@ def EstimateVAR(data, H):
 
     SIGMA = np.cov(results.resid.T)
     ma_rep = results.ma_rep(maxn=H)
+
     GVD = np.zeros_like(SIGMA)
 
     r, c = GVD.shape
@@ -106,16 +111,4 @@ if __name__ == "__main__":
     print time.time()-t0
     plt.legend()
     plt.show()
-    exit()
-    Bootstrap1p(sigma, 100)
-    exit()
-    df10 = pd.rolling_apply(df, 10, lambda x: np.prod(1 + x) - 1)
-    df10 = df10.dropna().values.flatten()
-    df10 = df10 - np.mean(df10) + 1
-    print a.shape
-    print b.shape
-    sns.distplot(a, label='i.i.d.', norm_hist=True, bins=500)
-    sns.distplot(b, label='Sequential', norm_hist=True, bins=500)
-    sns.distplot(df10, label='Historical', norm_hist=True, bins=500)
-    plt.legend()
-    plt.show()
+
