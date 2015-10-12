@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from __future__ import division
 import pandas as pd
 import numpy as np
 import statsmodels.tsa.api as sm
@@ -102,8 +106,8 @@ def Bootstrap1p(sigma, iter):
 def BootstrapMult(resid, marep, iter):
     '''
 
-    Ikke færdiggjort.
-    Funktionene skal replikere "iter" perioders afkast af "periods" længde ved at bootstrappe shockvektorer fra
+    Ikke fÃ¦rdiggjort.
+    Funktionene skal replikere "iter" perioders afkast af "periods" lÃ¦ngde ved at bootstrappe shockvektorer fra
     "resid"
 
     :param resid:
@@ -111,34 +115,37 @@ def BootstrapMult(resid, marep, iter):
     :param iter:
     :return:
     '''
-    exit()
-    # Number of periods to simulate, and length of the response to shocks
-    periods = 60 * 7.5  # en dag i minutter
-    responseLength = len(marep) + 1
 
-    a_col = np.zeros((iter, marep.shape[-1]))
-    b_col = np.zeros((iter, marep.shape[-1]))
+    # Number of periods to simulate, and length of the response to shocks
+    periods = int(60 * 7.5)  # en dag i minutter
+    responseLength = len(marep)
+    nAssets = len(marep[0])
+
+    dailyReturns = []
 
     for i in range(iter):
-        shockMatrix = np.array([random.choice(resid.T.values) for x in range(responseLength * 2)])
-        print shockMatrix
-        print shockMatrix.shape
-        exit()
-        impulseResponseSystem = marep[::-1]
+        simReturns = pd.DataFrame(np.zeros((periods,nAssets)))
+        simValues = pd.DataFrame(np.ones((periods,nAssets)))
 
-        returnPlaceholder = np.zeros((marep.shape[-1], marep.shape[-1]))
+        shockMatrix = np.array([random.choice(resid.T.values) for x in simReturns.iterrows()])
 
-        for day in range(days):
-            responsePlaceholder = np.zeros((impulseResponseSystem.shape[0], impulseResponseSystem.shape[1]))
-            for responsePeriod in range(responseLength):
-                shockVector = shockMatrix[responsePeriod + day, :]
-                impulseResponseMatrix = impulseResponseSystem[responsePeriod]
+        impulseResponseSystem = marep[::-1] #Invert impulse responses to fit DataFrame
+        for t, r in simReturns.iterrows():
+            if t>=0:
+                for h in range(responseLength):
+                    simReturns.loc[t] += impulseResponseSystem[h].dot(shockMatrix[t+h-responseLength+1])
 
-                responsePlaceholder[responsePeriod] = shockVector.dot(impulseResponseMatrix)
+                if t==0:
+                    simValues.loc[t] *= simReturns.loc[t]+1
 
-        a_col[i] = pd.DataFrame(returnPlaceholder + 1).product()
+                else:
+                    simValues.loc[t] *= simValues.loc[t-1] * (simReturns.loc[t]+1)
 
-    return a_col.flatten(), b_col.flatten()
+        dailyReturns.append(simValues.iloc[-1,:].sum() / len(simValues.columns))
+
+    sns.distplot(dailyReturns)
+    plt.show()
+    exit()
 
 
 if __name__ == "__main__":
