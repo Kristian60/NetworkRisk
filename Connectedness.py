@@ -56,8 +56,8 @@ def EstimateVAR(data, H, sparse_method=False):
 def BootstrapMult(resid, marep, iter, dummy=False):
     '''
 
-    Ikke færdiggjort.
-    Funktionene skal replikere "iter" perioders afkast af "periods" længde ved at bootstrappe shockvektorer fra
+    Ikke fÃ¦rdiggjort.
+    Funktionene skal replikere "iter" perioders afkast af "periods" lÃ¦ngde ved at bootstrappe shockvektorer fra
     "resid"
 
     :param resid:
@@ -97,6 +97,7 @@ def realizedDaily():
     df = df.ix[:, 2:]
     df = np.log(df).diff().dropna()+1
     return (df.sum(axis=1) / len(df.columns)).values
+
 
 if __name__ == "__main__":
 
