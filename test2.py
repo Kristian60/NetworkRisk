@@ -61,7 +61,7 @@ def VarSimul(data,H):
     VARstd = np.array(VARstd).reshape(len(VARstd)/len(data.columns),len(data.columns),len(data.columns))
     test = []
     print VARcoeff[3][0,6]
-    for i in range(20000):
+    for i in range(1000):
         if i%1000==0:
             print i
         VarSim = np.zeros((len(VARcoeff)/len(data.columns),len(data.columns),len(data.columns)))
@@ -71,17 +71,46 @@ def VarSimul(data,H):
 
                     VarSim[j][k,l] = np.random.normal(VARcoeff[j][k,l],VARstd[j][k,l])
         marep = ma_rep(VarSim,10)
-        test.append(marep[3][0,6])
+        test.append(marep[1][0,0])
+    print np.std(test)
     seaborn.distplot(test,norm_hist=True)
     plt.show()
+
+def SOI(data,H):
+    months = []
+    sois = []
+    splits = 200
+    lens = int(len(data)/splits)
+    #for month in range(1,7):
+    for mm in range(splits):
+        td = data[mm*lens:(mm+1)*lens]
+        if mm>0:
+            td = data[mm*lens-int(0.5*lens):(mm+1)*lens]
+        td.index = pd.to_datetime(td.index)
+        #td = td[td.index.month==month]
+        gvd,sigma,marep, resid = EstimateVAR(td,15)
+        soi = 0
+        for i in gvd.index:
+            for j in gvd.columns:
+                if i!=j:
+                    soi += gvd.loc[i,j]
+        soi /= len(gvd)
+        months.append(td.index[-1])
+        sois.append(soi)
+        print soi
+    plt.plot_date(months,sois,fmt='-')
+    plt.title('Total Spillover Index')
+    plt.xlabel('Date')
+    plt.ylabel('SOI')
+    plt.show()
+
+
 
 if __name__ == "__main__":
     data = pd.read_csv('data/minutedata.csv',index_col=0)
     data.index = pd.to_datetime(data.index)
     data = np.log(data).diff().dropna()
-    print data
-    exit()
-    VarSimul(data,15)
+    SOI(data,15)
 
 
 
