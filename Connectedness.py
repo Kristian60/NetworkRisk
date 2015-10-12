@@ -52,7 +52,6 @@ def EstimateVAR(data, H, sparse_method=False):
 
     return pd.DataFrame(GVD), SIGMA, _ma_rep, results.resid
 
-
 def BootstrapMult(resid, marep, iter, dummy=False):
     '''
 
@@ -67,7 +66,7 @@ def BootstrapMult(resid, marep, iter, dummy=False):
     '''
 
     # Number of periods to simulate, and length of the response to shocks
-    periods = int(60 * 7.5)  # en dag i minutter
+    periods = int(60 * 6.5)  # en dag i minutter
     responseLength = len(marep)
     nAssets = len(marep[0])
 
@@ -98,6 +97,16 @@ def realizedDaily():
     df = np.log(df).diff().dropna()+1
     return (df.sum(axis=1) / len(df.columns)).values
 
+def mcVar(data,iter):
+    data = (1+data).resample('b',how='prod').dropna()
+    _returns = data.sum(axis=1)/len(data.columns)
+
+    _mean = _returns.mean()
+    _std = _returns.std()
+
+    return np.random.normal(_mean,_std,iter)
+
+
 if __name__ == "__main__":
 
     df = pd.read_csv('data/minutedata.csv', sep=",", index_col=0)
@@ -105,6 +114,8 @@ if __name__ == "__main__":
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
 
+    monteC_VAR = mcVar(df,1000)
+    sns.distplot(monteC_VAR, label="MC VaR", norm_hist=True)
 
     # Actual bootstrapped values
     actualReturns = realizedDaily()
@@ -112,16 +123,24 @@ if __name__ == "__main__":
     sns.distplot(actualReturns, norm_hist=True, label="Actual")
 
     # Modeling using sparse method
-    con, sigma, marep, resid = EstimateVAR(df, 15, sparse_method=True)
-    print "Model Estimation done", time.time() - t0
-    modelReturns_Sparse = BootstrapMult(resid, marep, 1000)
-    sns.distplot(modelReturns_Sparse, norm_hist=True, label="Sparse")
-
-    # Modeling using full MA-rep
     con, sigma, marep, resid = EstimateVAR(df, 15, sparse_method=False)
     print "Model Estimation done", time.time() - t0
-    modelReturns_Full = BootstrapMult(resid, marep, 1000)
-    sns.distplot(modelReturns_Full, norm_hist=True, label="Full")
+    modelReturns_Sparse = BootstrapMult(resid, marep, 10000)
+    sns.distplot(modelReturns_Sparse, norm_hist=True, label="Sparse")
+    print "Actual VAR:", np.percentile(actualReturns,1)
+    print "-----------"
+    print "MC VAR:", np.percentile(monteC_VAR,1)
+    print "error:", np.percentile(monteC_VAR,1)-np.percentile(actualReturns,1)
+    print
+    print "Sparse VAR:", np.percentile(modelReturns_Sparse,1)
+    print "error:",np.percentile(modelReturns_Sparse,1)-np.percentile(actualReturns,1)
+
+
+    # Modeling using full MA-rep
+#    con, sigma, marep, resid = EstimateVAR(df, 15, sparse_method=False)
+#    print "Model Estimation done", time.time() - t0
+#    modelReturns_Full = BootstrapMult(resid, marep, 1000)
+#    sns.distplot(modelReturns_Full, norm_hist=True, label="Full")
 
     # Passing through shocks as dummy data
 #    modelReturns_dummy = BootstrapMult(resid, marep, 1000, dummy=True)
