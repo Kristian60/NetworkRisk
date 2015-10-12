@@ -124,6 +124,7 @@ def BootstrapMult(resid, marep, iter):
     dailyReturns = []
 
     for i in range(iter):
+        print i
         simReturns = pd.DataFrame(np.zeros((periods,nAssets)))
         simValues = pd.DataFrame(np.ones((periods,nAssets)))
 
