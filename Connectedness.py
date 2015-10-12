@@ -6,10 +6,11 @@ import pandas as pd
 import numpy as np
 import statsmodels.tsa.api as sm
 import matplotlib.pyplot as plt
-from sklearn import covariance
 import seaborn as sns
 import random
-import scipy
+import time
+
+t0 = time.time()
 
 pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
@@ -42,67 +43,6 @@ def EstimateVAR(data, H):
     return pd.DataFrame(GVD), SIGMA, ma_rep, results.resid.T
 
 
-def EstimateVAR_slow():
-    df = pd.read_csv('C:/Users/thoru_000/Dropbox/Pers/PyCharmProjects/Speciale/data.csv', sep=";")
-    df['Date'] = pd.to_datetime(df['Date'])
-    df = df.dropna().ffill().set_index('Date')
-    data = np.log(df).diff().dropna()
-
-    model = sm.VAR(data)
-    results = model.fit(maxlags=5, ic='aic')
-
-    SIGMA = np.cov(results.resid.T)
-    ma_rep = results.ma_rep(maxn=10)
-
-    GVD = np.zeros_like(SIGMA)
-
-    r, c = GVD.shape
-    for i in range(r):
-        for j in range(c):
-            sel_j = np.zeros(r)
-            sel_j[j] = 1
-            sel_i = np.zeros(r)
-            sel_i[i] = 1
-
-            AuxSum = 0
-            AuxSum_den = 0
-
-            for h in range(10):
-                AuxSum += (sel_i.T.dot(ma_rep[h]).dot(SIGMA).dot(sel_j)) ** 2
-                AuxSum_den += (sel_i.T.dot(ma_rep[h]).dot(SIGMA).dot(ma_rep[h].T).dot(sel_i))
-
-            GVD[i, j] = (AuxSum * (1 / SIGMA[i, i])) / AuxSum_den
-
-        GVD[i] /= GVD[i].sum()
-
-    pd.DataFrame(GVD).to_csv('GVD.csv', index=False, header=False)
-
-
-def Bootstrap1p(sigma, iter):
-    r = []
-    b_r = []
-    for i in range(iter):
-        if i % (iter / 500.0) == 0:
-            print i
-
-        shock = np.array([random.choice(resid.T.values) for x in range(20)])
-        p_r = [1] * 10
-        for t, A in enumerate(marep[10::-1]):
-            p_r *= shock[t, :].dot(marep[t]) + 1
-            print p_r
-            exit()
-
-        r.append(sum([0.1 * a for a in p_r]))
-        draw = random.choice(range(len(df) - 10))
-        b_r.append(sum([0.1 * a for a in df.ix[draw, :] + 1]))
-
-    dis = pd.DataFrame(np.array([r, b_r]).T, columns=["sim r", "br"])
-    sns.distplot(dis['sim r'], label="sim", norm_hist=True)
-    sns.distplot(dis['br'], label="Bootstrap", norm_hist=True)
-    plt.legend()
-    plt.show()
-
-
 def BootstrapMult(resid, marep, iter):
     '''
 
@@ -124,40 +64,48 @@ def BootstrapMult(resid, marep, iter):
     dailyReturns = []
 
     for i in range(iter):
-        print i
-        simReturns = pd.DataFrame(np.zeros((periods,nAssets)))
-        simValues = pd.DataFrame(np.ones((periods,nAssets)))
+        simReturns = np.zeros((periods, nAssets))
+        simValues = np.ones((periods + 1, nAssets))
 
-        shockMatrix = np.array([random.choice(resid.T.values) for x in simReturns.iterrows()])
+        shockMatrix = np.array([random.choice(resid.T.values) for x in range(len(simReturns) + 15)])
 
-        impulseResponseSystem = marep[::-1] #Invert impulse responses to fit DataFrame
-        for t, r in simReturns.iterrows():
-            if t>=0:
-                for h in range(responseLength):
-                    simReturns.loc[t] += impulseResponseSystem[h].dot(shockMatrix[t+h-responseLength+1])
+        impulseResponseSystem = marep[::-1]  # Invert impulse responses to fit DataFrame
+        for t in range(len(simReturns)):
+            for h in range(responseLength):
+                simReturns[t] += impulseResponseSystem[h].dot(shockMatrix[t + h - responseLength + 1])
+            simValues[t + 1] *= simValues[t] * (simReturns[t] + 1)
 
-                if t==0:
-                    simValues.loc[t] *= simReturns.loc[t]+1
+        dailyReturns.append(simValues[-1, :].sum() / simValues.shape[1])
 
-                else:
-                    simValues.loc[t] *= simValues.loc[t-1] * (simReturns.loc[t]+1)
+    return dailyReturns
 
-        dailyReturns.append(simValues.iloc[-1,:].sum() / len(simValues.columns))
-
-    sns.distplot(dailyReturns)
-    plt.show()
-    exit()
-
+def realizedDaily():
+    df = pd.read_csv('data/dailyData.csv', sep=",")
+    df = df.ix[:, 2:]
+    df = np.log(df).diff().dropna()+1
+    return (df.sum(axis=1) / len(df.columns)).values
 
 if __name__ == "__main__":
-    df = pd.read_csv('data/CRSP_IndexData.csv', sep=",", nrows=10000)
+
+    df = pd.read_csv('data/CRSP_IndexData.csv', sep=",", nrows=100000)
+    print "data loaded", time.time() - t0
     df = df.set_index(pd.to_datetime(df['DATE'] + ' ' + df['TIME']))
     df = df.ix[:, 2:]
     df = df.asfreq('1Min')
     df = np.log(df).diff().dropna()
 
+    actualReturns = realizedDaily()
     con, sigma, marep, resid = EstimateVAR(df, 15)
-    a, b = BootstrapMult(resid, marep, 1000)
+    modelReturns = BootstrapMult(resid, marep, 1000)
+
+
+    sns.distplot(modelReturns, norm_hist=True,label="Model")
+    sns.distplot(actualReturns, norm_hist=True,label="Actual")
+    sns.distplot(np.random.normal(np.mean(modelReturns),np.std(modelReturns),len(modelReturns)),norm_hist=True,label="Normal")
+    sns.distplot(np.random.normal(np.mean(actualReturns),np.std(actualReturns),len(actualReturns)),norm_hist=True,label="Normal2")
+    print time.time()-t0
+    plt.legend()
+    plt.show()
     exit()
     Bootstrap1p(sigma, 100)
     exit()
