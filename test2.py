@@ -88,17 +88,12 @@ def SOI(data,H):
         ddate += datetime.timedelta(1)
         #td = data[mm*lens:(mm+1)*lens]
         td = data
-        print ddate
+        #print ddate
         td.index = pd.to_datetime(td.index)
         td = td[(td.index.month==ddate.month) & (td.index.day==ddate.day) & (td.index.year==ddate.year)]
         if len(td)>0:
             gvd,sigma,marep, resid = EstimateVAR(td,15)
-            soi = 0
-            for i in gvd.index:
-                for j in gvd.columns:
-                    if i!=j:
-                        soi += gvd.loc[i,j]
-            soi /= len(gvd)
+            soi = (len(gvd)-np.trace(np.array(gvd)))/len(gvd)
             months.append(td.index[-1])
             sois.append(soi)
             #print soi
