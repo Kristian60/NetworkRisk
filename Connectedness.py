@@ -147,6 +147,9 @@ def rollingEstimates(trainingData, realData, start, end):
     results.to_csv('results_.csv')
 
 
+
+
+
 if __name__ == "__main__":
     df = pd.read_csv('data/minutedata2.csv', sep=",", index_col=0)
     df.index = pd.to_datetime(df.index)
