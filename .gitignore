@@ -1,0 +1,8 @@
+*.iml
+
+## Directory-based project format:
+.idea/
+
+.idea/Speciale.iml
+.idea/NwRsk.ppk
+.idea/inspectionProfiles/profiles_settings.xml
