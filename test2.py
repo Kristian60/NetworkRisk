@@ -14,7 +14,7 @@ def Main():
 
 
 def MakeMinute():
-    df = pd.read_csv('data/thesis-data.csv',iterator=True,chunksize=10000)
+    df = pd.read_csv('data/full_data.csv',iterator=True,chunksize=10000)
     for enr, data in enumerate(df):
         print enr
         data['seconds'] = [j.split(':')[-1] for j in (data['TIME'])]
@@ -23,8 +23,8 @@ def MakeMinute():
         data = data[[j for j in data.columns if j not in ['TIME','DATE','seconds']]]
         #data = data.asfreq('1Min')
         if enr ==0:
-            data[:0].to_csv('minutedata.csv',mode='w',index=True,header=True)
-        data.to_csv('minutedata.csv',mode='a',index=True,header=False)
+            data[:0].to_csv('minutedata2.csv',mode='w',index=True,header=True)
+        data.to_csv('minutedata2.csv',mode='a',index=True,header=False)
 
 
 def Old(data):
@@ -82,22 +82,26 @@ def SOI(data,H):
     splits = 200
     lens = int(len(data)/splits)
     #for month in range(1,7):
-    for mm in range(splits):
-        td = data[mm*lens:(mm+1)*lens]
-        if mm>0:
-            td = data[mm*lens-int(0.5*lens):(mm+1)*lens]
+    ddate = datetime.datetime(2015,1,1)
+    #for mm in range(splits):
+    while ddate<datetime.datetime(2015,7,1):
+        ddate += datetime.timedelta(1)
+        #td = data[mm*lens:(mm+1)*lens]
+        td = data
+        print ddate
         td.index = pd.to_datetime(td.index)
-        #td = td[td.index.month==month]
-        gvd,sigma,marep, resid = EstimateVAR(td,15)
-        soi = 0
-        for i in gvd.index:
-            for j in gvd.columns:
-                if i!=j:
-                    soi += gvd.loc[i,j]
-        soi /= len(gvd)
-        months.append(td.index[-1])
-        sois.append(soi)
-        print soi
+        td = td[(td.index.month==ddate.month) & (td.index.day==ddate.day) & (td.index.year==ddate.year)]
+        if len(td)>0:
+            gvd,sigma,marep, resid = EstimateVAR(td,15)
+            soi = 0
+            for i in gvd.index:
+                for j in gvd.columns:
+                    if i!=j:
+                        soi += gvd.loc[i,j]
+            soi /= len(gvd)
+            months.append(td.index[-1])
+            sois.append(soi)
+            #print soi
     plt.plot_date(months,sois,fmt='-')
     plt.title('Total Spillover Index')
     plt.xlabel('Date')
@@ -107,7 +111,7 @@ def SOI(data,H):
 
 
 if __name__ == "__main__":
-    data = pd.read_csv('data/minutedata.csv',index_col=0)
+    data = pd.read_csv('data/minutedata2.csv',index_col=0)
     data.index = pd.to_datetime(data.index)
     data = np.log(data).diff().dropna()
     SOI(data,15)
