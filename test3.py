@@ -30,6 +30,7 @@ if __name__ == "__main__":
     data = pandas2ri.py2ri(data)
     rpy2.robjects.globalenv['data'] = data
     armaspec = (1,1,1,1,1,1)
+
     rscript = """
                 suppressMessages(require(rugarch))
                 suppressMessages(require(rmgarch))
