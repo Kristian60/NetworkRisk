@@ -49,7 +49,6 @@ if __name__ == "__main__":
     test = r(rscript)
 
 
-
     b = pd.DataFrame(test,columns=cols)
     print b
     print datetime.datetime.now()-t0
