@@ -25,7 +25,7 @@ if __name__ == "__main__":
     t0 = datetime.datetime.now()
     data = pd.read_csv('data/minutedata2.csv',index_col=0)
     data.index = pd.to_datetime(data.index)
-    data = np.log(data).diff().dropna().iloc[:,:]
+    data = np.log(data).diff().dropna().iloc[:1000,:]
     cols = data.columns
     data = pandas2ri.py2ri(data)
     rpy2.robjects.globalenv['data'] = data
