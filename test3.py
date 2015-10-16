@@ -19,13 +19,7 @@ pandas2ri.activate()
 #utils.install_packages('Bessel')
 #exit()
 
-
-
-if __name__ == "__main__":
-    t0 = datetime.datetime.now()
-    data = pd.read_csv('data/minutedata2.csv',index_col=0)
-    data.index = pd.to_datetime(data.index)
-    data = np.log(data).diff().dropna().iloc[:1000,:]
+def runRScript(data):
     cols = data.columns
     data = pandas2ri.py2ri(data)
     rpy2.robjects.globalenv['data'] = data
@@ -54,4 +48,12 @@ if __name__ == "__main__":
     print datetime.datetime.now()-t0
     b.plot()
     plt.show()
+
+if __name__ == "__main__":
+    t0 = datetime.datetime.now()
+    data = pd.read_csv('data/minutedata2.csv',index_col=0)
+    data.index = pd.to_datetime(data.index)
+    data = np.log(data).diff().dropna().iloc[:1000,:]
+    runRScript(data)
+
 
