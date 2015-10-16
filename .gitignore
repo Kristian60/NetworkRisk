@@ -1,3 +1,4 @@
+*.txt
 ## Directory-based project format:
 .idea/
 data/
