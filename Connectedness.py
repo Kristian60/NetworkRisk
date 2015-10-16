@@ -134,6 +134,7 @@ def estimateAndBootstrap(df, p, iter, sparse_method=False):
     con, sigma, marep, resid = EstimateVAR(df, p, sparse_method=sparse_method)
     return BootstrapMult(resid, marep, iter)
 
+
 def formalTests(results, realData):
     def unconditionalCoverage(events, p, t):
         '''
@@ -232,17 +233,17 @@ def formalTests(results, realData):
     t = len(data)
 
     return [unconditionalCoverage(data['e1'], 0.01, t),
-    unconditionalCoverage(data['e5'], 0.05, t),
-    pofTest(data['e1'], 0.01, t),
-    pofTest(data['e5'], 0.05, t),
+            unconditionalCoverage(data['e5'], 0.05, t),
+            pofTest(data['e1'], 0.01, t),
+            pofTest(data['e5'], 0.05, t),
 
-    tuffTest(data['e1'], 0.1),
-    tuffTest(data['e5'], 0.5),
+            tuffTest(data['e1'], 0.1),
+            tuffTest(data['e5'], 0.5),
 
-    mixedKupiecTest(data['e1'], 0.01, t),
-    mixedKupiecTest(data['e5'], 0.05, t),
-    christoffersenIFT(data['e1'], 0.01, t),
-    christoffersenIFT(data['e5'], 0.05, t)]
+            mixedKupiecTest(data['e1'], 0.01, t),
+            mixedKupiecTest(data['e5'], 0.05, t),
+            christoffersenIFT(data['e1'], 0.01, t),
+            christoffersenIFT(data['e5'], 0.05, t)]
 
 
 def backtest(trainingData, realData, start, end, memory, model, *args):
@@ -253,26 +254,27 @@ def backtest(trainingData, realData, start, end, memory, model, *args):
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim = model(trainingData[dateMemory:date], *args)
         results.loc[date] = [np.percentile(modelSim, 1), np.percentile(modelSim, 5)]
-    duration = (time.time() - timerStart)/len(results.index)
+    duration = (time.time() - timerStart) / len(results.index)
 
     tests = formalTests(results, realData)
     tests.append(duration)
     backtestRapport = pd.DataFrame([t for t in tests]
                                    , index=[
-                                    'unconditional coverage 1%',
-                                    'unconditional coverage 5%',
-                                    'proportion of failures 1%',
-                                    'proportion of failures 5%',
-                                    'time until first failure 1%',
-                                    'time until first failure 5%',
-                                    'Christoffersen ift 1%',
-                                    'Christoffersen ift 5%',
-                                    'mixed Kupiec test 1%',
-                                    'mixed Kupiec test 5%',
-                                    'comp.duration per day'])
+            'unconditional coverage 1%',
+            'unconditional coverage 5%',
+            'proportion of failures 1%',
+            'proportion of failures 5%',
+            'time until first failure 1%',
+            'time until first failure 5%',
+            'Christoffersen ift 1%',
+            'Christoffersen ift 5%',
+            'mixed Kupiec test 1%',
+            'mixed Kupiec test 5%',
+            'comp.duration per day'])
 
     backtestRapport.loc['comp.duration per day'] = duration
     return backtestRapport
+
 
 if __name__ == "__main__":
     df = pd.read_csv('data/minutedata2.csv', sep=",", index_col=0)
@@ -282,10 +284,9 @@ if __name__ == "__main__":
 
     backtest_output = backtest(df, realizedDaily(), '20150101', '20150115', 50, estimateAndBootstrap, 10, 10)
 
-
     print time.strftime("%Y%m%d", time.gmtime())
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
     file.write("initial test of backtest function. \n base model from 20150101 to 20150115 \n \n")
-    for a, b in zip(backtest_output.index,backtest_output.values):
+    for a, b in zip(backtest_output.index, backtest_output.values):
         file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
     file.close()
