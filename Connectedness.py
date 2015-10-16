@@ -134,11 +134,6 @@ def estimateAndBootstrap(df, p, iter, sparse_method=False):
     con, sigma, marep, resid = EstimateVAR(df, p, sparse_method=sparse_method)
     return BootstrapMult(resid, marep, iter)
 
-
-def evaluateModel(VaRs):
-    realReturns = realizedDaily()
-
-
 def formalTests(results, realData):
     def unconditionalCoverage(events, p, t):
         '''
@@ -182,7 +177,7 @@ def formalTests(results, realData):
             v = np.argmax(events.values) + 1
 
             if raw_output:
-                return (v,-2 * np.log(np.power(p * (1 - p), v - 1) / ((1 / v) * np.power(1 - (1 / v), v - 1))))
+                return (v, -2 * np.log(np.power(p * (1 - p), v - 1) / ((1 / v) * np.power(1 - (1 / v), v - 1))))
             else:
                 return scipy.stats.chi2.cdf(
                     -2 * np.log(np.power(p * (1 - p), v - 1) / ((1 / v) * np.power(1 - (1 / v), v - 1))), df=1)
@@ -213,19 +208,22 @@ def formalTests(results, realData):
         pi = (n01 + n11) / (n00 + n01 + n10 + n11)
 
         LRind = -2 * np.log((np.power((1 - pi), n00 + n10) * np.power(pi, n01 + n11)) / (
-        np.power(1 - pi0, n00) * np.power(pi0, n01) * np.power(1 - pi1, n10) * np.power(pi1, n11)))
+            np.power(1 - pi0, n00) * np.power(pi0, n01) * np.power(1 - pi1, n10) * np.power(pi1, n11)))
         LRpof = pofTest(events, p, t, raw_output=True)
 
         return scipy.stats.chi2.cdf(LRind + LRpof, 2)
 
     def mixedKupiecTest(events, p, t):
 
-        LRindependent = 0
-        r = tuffTest(events,p,t)
-        if r == None:
-            return 1
-        n, LRtuff = r
-        LRindependent += LRtuff
+        nEvents = sum(events)
+        LRind = 0
+        for e in range(nEvents):
+            print e, "\n", events
+            n, LRtuff = tuffTest(events, p, t)
+            LRind += LRtuff
+            events = events[n:]
+        LRpof = pofTest(events, p, t, raw_output=True)
+        return scipy.stats.chi2.cdf(LRind + LRpof, 2)
 
     data = pd.concat([results, realData], axis=1).dropna()
     data['e1'] = data[0] < data['VaR1']
@@ -233,27 +231,48 @@ def formalTests(results, realData):
 
     t = len(data)
 
-    print mixedKupiecTest(data['e1'], 0.01, t)
-    print christoffersenIFT(data['e1'], 0.01, t)
-    print christoffersenIFT(data['e5'], 0.05, t)
-    print pofTest(data['e1'], 0.01, t)
-    print pofTest(data['e5'], 0.05, t)
-    print unconditionalCoverage(data['e1'], 0.01, t)
-    print unconditionalCoverage(data['e5'], 0.05, t)
-    print tuffTest(data['e1'], 0.1)
-    print tuffTest(data['e5'], 0.5)
-    exit()
+    return [unconditionalCoverage(data['e1'], 0.01, t),
+    unconditionalCoverage(data['e5'], 0.05, t),
+    pofTest(data['e1'], 0.01, t),
+    pofTest(data['e5'], 0.05, t),
+
+    tuffTest(data['e1'], 0.1),
+    tuffTest(data['e5'], 0.5),
+
+    mixedKupiecTest(data['e1'], 0.01, t),
+    mixedKupiecTest(data['e5'], 0.05, t),
+    christoffersenIFT(data['e1'], 0.01, t),
+    christoffersenIFT(data['e5'], 0.05, t)]
 
 
 def backtest(trainingData, realData, start, end, memory, model, *args):
     results = pd.DataFrame(columns=['VaR1', 'VaR5'], index=realData[start:end].index)
+
+    timerStart = time.time()
     for date in results.index:
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim = model(trainingData[dateMemory:date], *args)
         results.loc[date] = [np.percentile(modelSim, 1), np.percentile(modelSim, 5)]
+    duration = (time.time() - timerStart)/len(results.index)
 
-    formalTests(results, realData)
+    tests = formalTests(results, realData)
+    tests.append(duration)
+    backtestRapport = pd.DataFrame([t for t in tests]
+                                   , index=[
+                                    'unconditional coverage 1%',
+                                    'unconditional coverage 5%',
+                                    'proportion of failures 1%',
+                                    'proportion of failures 5%',
+                                    'time until first failure 1%',
+                                    'time until first failure 5%',
+                                    'Christoffersen ift 1%',
+                                    'Christoffersen ift 5%',
+                                    'mixed Kupiec test 1%',
+                                    'mixed Kupiec test 5%',
+                                    'comp.duration per day'])
 
+    backtestRapport.loc['comp.duration per day'] = duration
+    return backtestRapport
 
 if __name__ == "__main__":
     df = pd.read_csv('data/minutedata2.csv', sep=",", index_col=0)
@@ -261,5 +280,12 @@ if __name__ == "__main__":
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
 
-    backtest(df, realizedDaily(), '20150101', '20150115', 50, estimateAndBootstrap, 10, 10)
-    print estimateAndBootstrap(df, 10, 10)
+    backtest_output = backtest(df, realizedDaily(), '20150101', '20150115', 50, estimateAndBootstrap, 10, 10)
+
+
+    print time.strftime("%Y%m%d", time.gmtime())
+    file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
+    file.write("initial test of backtest function. \n base model from 20150101 to 20150115 \n \n")
+    for a, b in zip(backtest_output.index,backtest_output.values):
+        file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
+    file.close()
