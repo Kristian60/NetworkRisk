@@ -251,6 +251,7 @@ def backtest(trainingData, realData, start, end, memory, model, *args):
 
     timerStart = time.time()
     for date in results.index:
+        print date
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim = model(trainingData[dateMemory:date], *args)
         results.loc[date] = [np.percentile(modelSim, 1), np.percentile(modelSim, 5)]
