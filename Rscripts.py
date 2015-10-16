@@ -9,25 +9,34 @@ from rpy2.robjects import pandas2ri
 import matplotlib.pyplot as plt
 import seaborn
 import datetime
+import scipy.stats
+
+
 
 pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
 
-utils = importr('utils')
 pandas2ri.activate()
-#utils.install_packages('Bessel')
-#exit()
 
-def runRScript(data):
+install = 0
+
+if install == 1:
+    utils = importr('utils')
+    utils.install_packages('copula',dependencies=True)
+    r('install.packages("C:/Users/Thomas/Downloads/gsl_1.9-10.tar.gz", repos = NULL, type = "source")')
+    #utils.install_packages("gsl")
+    exit()
+
+def RDCC(data):
     cols = data.columns
     data = pandas2ri.py2ri(data)
     rpy2.robjects.globalenv['data'] = data
     armaspec = (1,1,1,1,1,1)
 
     rscript = """
-                suppressMessages(require(rugarch))
-                suppressMessages(require(rmgarch))
+                suppressMessages(library(rugarch))
+                suppressMessages(library(rmgarch))
                 ###data <- matrix(rnorm(2200),200,11)
                 spec <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(%s, %s),submodel = NULL,
                                                          external.regressors = NULL, variance.targeting = FALSE),
@@ -42,18 +51,56 @@ def runRScript(data):
 
     print rscript
     test = r(rscript)
-
     b = pd.DataFrame(test,columns=cols)
-    print b
-    print datetime.datetime.now()-t0
-    b.plot()
+def RCopula(data,N):
+
+    cols = data.columns
+    data2 = pandas2ri.py2ri(data)
+    data = np.array(data)
+    rpy2.robjects.globalenv['data'] = data2
+    rpy2.robjects.globalenv['N'] = N
+
+
+    rscript = """ suppressMessages(library(copula))
+
+                    nAssets <- ncol(data)
+                    u <- pobs(data,N)
+                    clayton.cop <- claytonCopula(2,dim=nAssets)
+                    a <- fitCopula(clayton.cop,u,method="mpl")
+                    y <- (rCopula(copula=claytonCopula(a@estimate,nAssets),n=N))
+                    y"""
+
+    print rscript
+
+
+    b = r(rscript)
+
+    ###########????????????
+    for j in range(b.shape[1]):
+        mean = np.mean(data[:,j])
+        std = np.std(data[:,j])
+        for i in range(b.shape[0]):
+            b[i,j] = scipy.stats.norm.ppf(b[i,j],loc=mean,scale=std)
+
+    seaborn.distplot(b.ravel(),norm_hist=True)
+    print scipy.stats.kurtosis(b.ravel())
+    print scipy.stats.skew(b.ravel())
+    print np.mean(b.ravel())
+    print np.std(b.ravel())
     plt.show()
+    exit()
+
+
+    b = pd.DataFrame(b)
+    return b
 
 if __name__ == "__main__":
     t0 = datetime.datetime.now()
     data = pd.read_csv('data/minutedata2.csv',index_col=0)
     data.index = pd.to_datetime(data.index)
-    data = np.log(data).diff().dropna().iloc[:1000,:]
-    runRScript(data)
+    data = np.log(data).diff().dropna().iloc[:int(6.5*60*5),:]
+    sim = RCopula(data,10000)
+    print sim
+    print datetime.datetime.now()-t0
 
 
