@@ -95,7 +95,6 @@ def BootstrapMult(resid, marep, iter, dummy=False):
                 simValues[t + 1] *= simValues[t] * (simReturns[t] + 1)
 
             dailyReturns.append(simValues[-1, :].sum() / simValues.shape[1])
-            # print datetime.datetime.now()-t0
     return dailyReturns
 
 
@@ -219,7 +218,6 @@ def formalTests(results, realData):
         nEvents = sum(events)
         LRind = 0
         for e in range(nEvents):
-            print e, "\n", events
             n, LRtuff = tuffTest(events, p, t)
             LRind += LRtuff
             events = events[n:]
@@ -250,8 +248,10 @@ def backtest(trainingData, realData, start, end, memory, model, *args):
     results = pd.DataFrame(columns=['VaR1', 'VaR5'], index=realData[start:end].index)
 
     timerStart = time.time()
+    f = open("log.txt", "w")
+
     for date in results.index:
-        print date
+        f.write(str(date) + "\n")
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim = model(trainingData[dateMemory:date], *args)
         results.loc[date] = [np.percentile(modelSim, 1), np.percentile(modelSim, 5)]
@@ -285,7 +285,6 @@ if __name__ == "__main__":
 
     backtest_output = backtest(df, realizedDaily(), '20130301', '20150701', 50, estimateAndBootstrap, 15, 10000)
 
-    print time.strftime("%Y%m%d", time.gmtime())
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
     file.write("initial test of backtest function. \n base model from 20150101 to 20150115 \n \n")
     for a, b in zip(backtest_output.index, backtest_output.values):
