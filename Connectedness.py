@@ -254,9 +254,11 @@ def backtest(trainingData, realData, start, end, memory, model, *args):
 
     for date in results.index:
         f.write(str(date) + "\n")
+        f.close()
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim = model(trainingData[dateMemory:date], *args)
         results.loc[date] = [np.percentile(modelSim, 1), np.percentile(modelSim, 5)]
+
     duration = (time.time() - timerStart) / len(results.index)
 
     tests = formalTests(results, realData)
