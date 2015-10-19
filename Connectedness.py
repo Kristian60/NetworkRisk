@@ -228,6 +228,8 @@ def formalTests(results, realData):
     data['e1'] = data[0] < data['VaR1']
     data['e5'] = data[0] < data['VaR5']
 
+    data.to_csv('Events_' + time.strftime("%Y%m%d", time.gmtime()) + '.csv')
+
     t = len(data)
 
     return [unconditionalCoverage(data['e1'], 0.01, t),
