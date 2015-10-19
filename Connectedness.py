@@ -250,10 +250,12 @@ def backtest(trainingData, realData, start, end, memory, model, *args):
     results = pd.DataFrame(columns=['VaR1', 'VaR5'], index=realData[start:end].index)
 
     timerStart = time.time()
-    f = open("log.txt", "w")
 
     for date in results.index:
-        f.write(str(date) + "\n")
+        f = open("log.txt", "w")
+        f.write('start: ' + str(start) + '\n')
+        f.write('end: '+ str(end)+ '\n')
+        f.write('now: '+ str(date.strftime('%Y%m%d'))+ '\n')
         f.close()
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim = model(trainingData[dateMemory:date], *args)
