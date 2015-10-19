@@ -261,6 +261,7 @@ def backtest(trainingData, realData, start, end, memory, model, *args):
 
     duration = (time.time() - timerStart) / len(results.index)
 
+
     tests = formalTests(results, realData)
     tests.append(duration)
     backtestRapport = pd.DataFrame([t for t in tests]
