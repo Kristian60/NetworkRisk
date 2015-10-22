@@ -5,8 +5,8 @@ from __future__ import division
 import pandas as pd
 import numpy as np
 import statsmodels.tsa.api as sm
-#import matplotlib.pyplot as plt
-#import seaborn as sns
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 import random
 import scipy
 import time
@@ -126,7 +126,9 @@ def zeroDeltaVar(data):
     _mean = _returns.mean()
     _std = _returns.std()
 
-    return np.random.normal(_mean, _std, iter)
+    z1 = -scipy.stats.norm.ppf(0.01)
+    z5 = -scipy.stats.norm.ppf(0.05)
+    return _mean - z1 * _std, _mean - z5 * _std
 
 
 def estimateAndBootstrap(df, p, iter, sparse_method=False):
@@ -246,7 +248,7 @@ def formalTests(results, realData):
             christoffersenIFT(data['e5'], 0.05, t)]
 
 
-def backtest(trainingData, realData, start, end, memory, model, *args):
+def backtest(trainingData, realData, start, end, memory, model, *kwargs):
     results = pd.DataFrame(columns=['VaR1', 'VaR5'], index=realData[start:end].index)
 
     timerStart = time.time()
@@ -254,12 +256,12 @@ def backtest(trainingData, realData, start, end, memory, model, *args):
     for date in results.index:
         f = open("log.txt", "w")
         f.write('start: ' + str(start) + '\n')
-        f.write('end: '+ str(end)+ '\n')
-        f.write('now: '+ str(date.strftime('%Y%m%d'))+ '\n')
+        f.write('end: ' + str(end) + '\n')
+        f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
         f.close()
         dateMemory = date - datetime.timedelta(days=memory)
-        modelSim = model(trainingData[dateMemory:date], *args)
-        results.loc[date] = [np.percentile(modelSim, 1), np.percentile(modelSim, 5)]
+        modelSim1p, modelSim5p = model(trainingData[dateMemory:date], *kwargs)
+        results.loc[date] = [modelSim1p, modelSim5p]
 
     duration = (time.time() - timerStart) / len(results.index)
 
@@ -279,6 +281,7 @@ def backtest(trainingData, realData, start, end, memory, model, *args):
             'mixed Kupiec test 5%',
             'comp.duration per day'])
 
+
     backtestRapport.loc['comp.duration per day'] = duration
     return backtestRapport
 
@@ -289,7 +292,8 @@ if __name__ == "__main__":
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
 
-    backtest_output = backtest(df, realizedDaily(), '20130301', '20150701', 50, estimateAndBootstrap, 15, 10000)
+    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150701', memory=50,
+                               model=zeroDeltaVar)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
     file.write("initial test of backtest function. \n base model from 20150101 to 20150115 \n \n")
