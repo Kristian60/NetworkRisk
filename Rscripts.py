@@ -50,9 +50,13 @@ def RDCC(data):
                  """ %(armaspec[0],armaspec[1],armaspec[2],armaspec[3],armaspec[4],armaspec[5])
 
     print rscript
-    test = r(rscript)
-    b = pd.DataFrame(test,columns=cols)
-def RCopula(data,N):
+    b = r(rscript)
+    b = pd.DataFrame(b)
+    b.plot()
+    #plt.show()
+    return b
+
+def RCopula(data,sim):
 
     cols = data.columns
     data2 = pandas2ri.py2ri(data)
@@ -81,12 +85,7 @@ def RCopula(data,N):
         std = np.std(data[:,j])
         for i in range(b.shape[0]):
             b[i,j] = scipy.stats.norm.ppf(b[i,j],loc=mean,scale=std)
-
-    seaborn.distplot(b.ravel(),norm_hist=True)
-    print scipy.stats.kurtosis(b.ravel())
-    print scipy.stats.skew(b.ravel())
-    print np.mean(b.ravel())
-    print np.std(b.ravel())
+    pd.DataFrame(b).iloc[:,1].plot()
     plt.show()
     exit()
 
@@ -94,12 +93,49 @@ def RCopula(data,N):
     b = pd.DataFrame(b)
     return b
 
+def RCopulaGarch(data,sim):
+    data = pandas2ri.py2ri(data)
+    rpy2.robjects.globalenv['data'] = data
+    rpy2.robjects.globalenv['simulations'] = sim
+
+    rscript = """
+                suppressMessages(library(rugarch))
+                suppressMessages(library(rmgarch))
+
+                #data <- matrix(rnorm(2200),200,11)
+                nassets <- ncol(data)
+                nperiods <- 390
+                #simulations <- 5000
+
+                spec <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1),submodel = NULL,external.regressors = NULL, variance.targeting = FALSE),mean.model = list(armaOrder = c(1, 1), external.regressors = NULL,distribution.model = "norm", start.pars = list(), fixed.pars = list()))
+                dccspec<-dccspec(uspec=multispec(replicate(ncol(data),spec)),dccOrder = c(1,1),distribution="mvnorm")
+                mspec <-multispec(replicate(ncol(data),spec))
+                cspec<-cgarchspec(mspec, VAR = FALSE, robust = FALSE, lag = 1, lag.max = NULL,lag.criterion = "AIC", external.regressors = NULL,robust.control = list(gamma = 0.25, delta = 0.01, nc = 10, ns = 500),dccOrder = c(1, 1), asymmetric = FALSE,distribution.model = list(copula = "mvt",method = "Kendall", time.varying = FALSE,transformation = "parametric"),start.pars = list(), fixed.pars = list())
+                copgarch <- cgarchfit(cspec, data, spd.control = list(lower = 0.1, upper = 0.9, type = "pwm",kernel = "epanech"), fit.control = list(eval.se = TRUE, stationarity = TRUE,scale = FALSE), solver = "solnp", solver.control = list(), out.sample = 0,cluster = NULL, fit = NULL, VAR.fit = NULL, realizedVol = NULL)
+                simfit <- cgarchsim(copgarch, n.sim = nperiods, n.start = 0, m.sim = simulations,startMethod = "sample", presigma = NULL, preresiduals = NULL,prereturns = NULL, preR = NULL, preQ = NULL, preZ = NULL, rseed = NULL,mexsimdata = NULL, vexsimdata = NULL, cluster = NULL, only.density = FALSE,prerealized = NULL)
+                simdata <- fitted(simfit)
+
+                t <- array(rep(nperiods*nassets*simulations),c(nperiods,nassets,simulations))
+                for (i in 1:simulations) {
+                  t[,,i] <- fitted(simfit,i)
+                }
+                t
+
+                 """
+
+    print rscript
+    b = r(rscript)
+    return b
+
+
+
 if __name__ == "__main__":
     t0 = datetime.datetime.now()
     data = pd.read_csv('data/minutedata2.csv',index_col=0)
     data.index = pd.to_datetime(data.index)
-    data = np.log(data).diff().dropna().iloc[:int(6.5*60*5),:]
-    sim = RCopula(data,10000)
+    #data = np.log(data).diff().dropna().iloc[:int(6.5*60*5),:]
+    data = np.log(data).diff().dropna().iloc[:10000,:]
+    sim = RCopulaGarch(data,5000)
     print sim
     print datetime.datetime.now()-t0
 

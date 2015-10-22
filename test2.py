@@ -1,7 +1,8 @@
 from __future__ import division
 import matplotlib.pyplot as plt
 import numpy as np
-from Connectedness import EstimateVAR
+#from Connectedness import EstimateVAR
+import Connectedness
 import pandas as pd
 import random
 import seaborn
@@ -10,7 +11,8 @@ import statsmodels.tsa.api as sm
 from statsmodels.tsa.vector_ar.var_model import ma_rep
 import scipy.stats
 
-def Main():
+
+def Main(data):
     pass
 
 
@@ -72,7 +74,6 @@ def VarSimul(data,H):
     print np.std(test)
     seaborn.distplot(test,norm_hist=True)
     plt.show()
-
 def MetropolisHastingMCMC(data,H):
     model = sm.VAR(data)
     results = model.fit(H)
@@ -119,8 +120,6 @@ def MetropolisHastingMCMC(data,H):
     plt.vlines(mean,0,7.5)
     plt.legend()
     plt.show()
-
-
 def WildBootstrap(data,H):
     gvd,sigma,vma,resid = EstimateVAR(data,H)
     nAssets = len(vma[0])
@@ -167,7 +166,6 @@ def WildBootstrap(data,H):
         axs[i].set_title(method)
     plt.tight_layout()
     plt.show()
-
 def SOI(data,H):
     months = []
     sois = []
@@ -198,10 +196,15 @@ def SOI(data,H):
 if __name__ == "__main__":
     data = pd.read_csv('data/minutedata2.csv',index_col=0)
     data.index = pd.to_datetime(data.index)
-    data = np.log(data).diff().dropna()[:1000]
-    H = 10
-    print "data loaded"
-    WildBootstrap(data,H)
+    data = data.asfreq('5Min').dropna()
+    data = np.log(data).diff().dropna()
+    model = sm.VAR(data)
+    results = model.fit(10,ic='bic')
+    marep = results.ma_rep(10)
+    print results.summary()
+    #_,_,marep,_ = Connectedness.EstimateVAR(data,10)
+    print pd.DataFrame(marep[1])
+    exit()
 
 
 
