@@ -102,10 +102,10 @@ def RCopulaGarch(data,sim):
                 suppressMessages(library(rugarch))
                 suppressMessages(library(rmgarch))
 
-                #data <- matrix(rnorm(2200),200,11)
+                data <- matrix(rnorm(2200),200,11)
                 nassets <- ncol(data)
                 nperiods <- 390
-                #simulations <- 5000
+                simulations <- 5000
 
                 spec <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1),submodel = NULL,external.regressors = NULL, variance.targeting = FALSE),mean.model = list(armaOrder = c(1, 1), external.regressors = NULL,distribution.model = "norm", start.pars = list(), fixed.pars = list()))
                 dccspec<-dccspec(uspec=multispec(replicate(ncol(data),spec)),dccOrder = c(1,1),distribution="mvnorm")
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     data.index = pd.to_datetime(data.index)
     #data = np.log(data).diff().dropna().iloc[:int(6.5*60*5),:]
     data = np.log(data).diff().dropna().iloc[:10000,:]
-    sim = RCopulaGarch(data,5000)
+    sim = RCopulaGarch(data,1000)
     print sim
     print datetime.datetime.now()-t0
 

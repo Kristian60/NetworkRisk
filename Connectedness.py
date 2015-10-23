@@ -82,7 +82,6 @@ def BootstrapMult(resid, marep, iter, dummy=False):
         # t0 = datetime.datetime.now()
 
         simReturns = np.zeros((periods, nAssets))
-        simReturns_test = np.zeros((periods, nAssets))
         simValues = np.ones((periods + 1, nAssets))
 
         shockMatrix = np.array([random.choice(resid.values) for x in range(len(simReturns) + 15)])
