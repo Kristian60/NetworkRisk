@@ -5,13 +5,16 @@ from __future__ import division
 import pandas as pd
 import numpy as np
 import statsmodels.tsa.api as sm
-# import matplotlib.pyplot as plt
-# import seaborn as sns
 import random
 import scipy
 import time
 from statsmodels.tsa.vector_ar.var_model import ma_rep
 import datetime
+import sys
+
+if hasattr(sys, 'getwindowsversion'):
+    import matplotlib.pyplot as plt
+    import seaborn as sns
 
 t0 = time.time()
 
@@ -131,9 +134,10 @@ def zeroDeltaVar(data):
     return _mean - z1 * _std, _mean - z5 * _std
 
 
-def estimateAndBootstrap(df, p, iter, sparse_method=False):
-    con, sigma, marep, resid = EstimateVAR(df, p, sparse_method=sparse_method)
-    return BootstrapMult(resid, marep, iter)
+def estimateAndBootstrap(df, H, iter, sparse_method=False):
+    con, sigma, marep, resid = EstimateVAR(df, H, sparse_method=sparse_method)
+    returnSeries = BootstrapMult(resid, marep, iter)
+    return np.percentile(returnSeries,0.01), np.percentile(returnSeries,0.05)
 
 
 def formalTests(results, realData):
@@ -173,7 +177,7 @@ def formalTests(results, realData):
         :param v: the first occurence of an event
         :return: the p-value of the test
         '''
-        if events.mean == 0:
+        if events.mean() == 0:
             return None
         else:
             v = np.argmax(events.values) + 1
@@ -200,14 +204,20 @@ def formalTests(results, realData):
         _events = pd.concat([events, events.shift()], axis=1).dropna()
         _events.columns = ['e', 'e-1']
 
-        n00 = len(_events[(_events['e'] == False) & (_events['e'] == False)]) / len(_events)
-        n10 = len(_events[(_events['e'] == True) & (_events['e'] == False)]) / len(_events)
-        n01 = len(_events[(_events['e'] == False) & (_events['e'] == True)]) / len(_events)
-        n11 = len(_events[(_events['e'] == True) & (_events['e'] == True)]) / len(_events)
+        n00 = len(_events[(_events['e'] == False) & (_events['e-1'] == False)])
+        n10 = len(_events[(_events['e'] == False) & (_events['e-1'] == True)])
+        n01 = len(_events[(_events['e'] == True) & (_events['e-1'] == False)])
+        n11 = len(_events[(_events['e'] == True) & (_events['e-1'] == True)])
 
-        pi0 = n01 / (n00 + n01)
-        pi1 = n11 / (n10 + n11)
-        pi = (n01 + n11) / (n00 + n01 + n10 + n11)
+        try:
+            #Conditional probabilities
+            pi0 = n01 / (n00 + n01)
+            pi1 = n11 / (n10 + n11)
+
+            #Unconditional probability for an event
+            pi = (n01 + n11) / (n00 + n01 + n10 + n11)
+        except ZeroDivisionError:
+            return None
 
         LRind = -2 * np.log((np.power((1 - pi), n00 + n10) * np.power(pi, n01 + n11)) / (
             np.power(1 - pi0, n00) * np.power(pi0, n01) * np.power(1 - pi1, n10) * np.power(pi1, n11)))
@@ -220,11 +230,12 @@ def formalTests(results, realData):
         nEvents = sum(events)
         LRind = 0
         for e in range(nEvents):
-            n, LRtuff = tuffTest(events, p, t)
+            n, LRtuff = tuffTest(events, p, raw_output=True)
             LRind += LRtuff
             events = events[n:]
+
         LRpof = pofTest(events, p, t, raw_output=True)
-        return scipy.stats.chi2.cdf(LRind + LRpof, 2)
+        return scipy.stats.chi2.cdf(LRind + LRpof, nEvents+1)
 
     data = pd.concat([results, realData], axis=1).dropna()
     data['e1'] = data[0] < data['VaR1']
@@ -248,22 +259,24 @@ def formalTests(results, realData):
             christoffersenIFT(data['e5'], 0.05, t)]
 
 
-def backtest(trainingData, realData, start, end, memory, model, *kwargs):
+def backtest(trainingData, realData, start, end, memory, model, **kwargs):
     results = pd.DataFrame(columns=['VaR1', 'VaR5'], index=realData[start:end].index)
 
     timerStart = time.time()
 
     for date in results.index:
+        print date
         f = open("log.txt", "w")
         f.write('start: ' + str(start) + '\n')
         f.write('end: ' + str(end) + '\n')
         f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
         f.close()
         dateMemory = date - datetime.timedelta(days=memory)
-        modelSim1p, modelSim5p = model(trainingData[dateMemory:date], *kwargs)
+        modelSim1p, modelSim5p = model(trainingData[dateMemory:date], **kwargs)
         results.loc[date] = [modelSim1p, modelSim5p]
 
     duration = (time.time() - timerStart) / len(results.index)
+
 
     tests = formalTests(results, realData)
     tests.append(duration)
@@ -281,22 +294,20 @@ def backtest(trainingData, realData, start, end, memory, model, *kwargs):
             'mixed Kupiec test 5%',
             'comp.duration per day'])
 
-
-    backtestRapport.loc['comp.duration per day'] = duration
     return backtestRapport
 
 
 if __name__ == "__main__":
-    df = pd.read_csv('data/minutedata2.csv', sep=",", index_col=0)
+    df = pd.read_csv('data/minutedata3.csv', sep=",", index_col=0)
     df.index = pd.to_datetime(df.index)
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
 
-    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150701', memory=50,
-                               model=zeroDeltaVar)
+    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150808', memory=50,
+                               model=estimateAndBootstrap, H=15, iter=10000, sparse_method=False)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
-    file.write("initial test of backtest function. \n base model from 20150101 to 20150115 \n \n")
+    file.write("After cleansing data, second run at backtesting the fully specified version\n \n")
     for a, b in zip(backtest_output.index, backtest_output.values):
         file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
     file.close()
