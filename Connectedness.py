@@ -137,7 +137,7 @@ def zeroDeltaVar(data):
 def estimateAndBootstrap(df, H, iter, sparse_method=False):
     con, sigma, marep, resid = EstimateVAR(df, H, sparse_method=sparse_method)
     returnSeries = BootstrapMult(resid, marep, iter)
-    return np.percentile(returnSeries,0.01), np.percentile(returnSeries,0.05)
+    return np.percentile(returnSeries, 0.01), np.percentile(returnSeries, 0.05)
 
 
 def formalTests(results, realData):
@@ -183,10 +183,10 @@ def formalTests(results, realData):
             v = np.argmax(events.values) + 1
 
             if raw_output:
-                return (v, -2 * np.log(np.power(p * (1 - p), v - 1) / ((1 / v) * np.power(1 - (1 / v), v - 1))))
+                return (v, -2 * np.log((p * np.power((1 - p), v - 1)) / ((1 / v) * np.power(1 - (1 / v), v - 1))))
             else:
                 return scipy.stats.chi2.cdf(
-                    -2 * np.log(np.power(p * (1 - p), v - 1) / ((1 / v) * np.power(1 - (1 / v), v - 1))), df=1)
+                    -2 * np.log((p * np.power((1 - p), v - 1)) / ((1 / v) * np.power(1 - (1 / v), v - 1))), df=1)
 
     def christoffersenIFT(events, p, t):
         '''
@@ -210,11 +210,11 @@ def formalTests(results, realData):
         n11 = len(_events[(_events['e'] == True) & (_events['e-1'] == True)])
 
         try:
-            #Conditional probabilities
+            # Conditional probabilities
             pi0 = n01 / (n00 + n01)
             pi1 = n11 / (n10 + n11)
 
-            #Unconditional probability for an event
+            # Unconditional probability for an event
             pi = (n01 + n11) / (n00 + n01 + n10 + n11)
         except ZeroDivisionError:
             return None
@@ -235,7 +235,7 @@ def formalTests(results, realData):
             events = events[n:]
 
         LRpof = pofTest(events, p, t, raw_output=True)
-        return scipy.stats.chi2.cdf(LRind + LRpof, nEvents+1)
+        return scipy.stats.chi2.cdf(LRind + LRpof, nEvents + 1)
 
     data = pd.concat([results, realData], axis=1).dropna()
     data['e1'] = data[0] < data['VaR1']
@@ -277,7 +277,6 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
 
     duration = (time.time() - timerStart) / len(results.index)
 
-
     tests = formalTests(results, realData)
     tests.append(duration)
     backtestRapport = pd.DataFrame([t for t in tests]
@@ -304,7 +303,10 @@ if __name__ == "__main__":
     print "data loaded", time.time() - t0
 
     backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150808', memory=50,
-                               model=estimateAndBootstrap, H=15, iter=10000, sparse_method=False)
+                               model=zeroDeltaVar)
+
+    #    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150808', memory=50,
+    #                               model=estimateAndBootstrap, H=15, iter=10000, sparse_method=False)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
     file.write("After cleansing data, second run at backtesting the fully specified version\n \n")
