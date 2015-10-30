@@ -23,7 +23,7 @@ pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
 
 
-def EstimateVAR(data, H, sparse_method=False):
+def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     """
 
     :param data: A numpy array of log returns
@@ -46,14 +46,20 @@ def EstimateVAR(data, H, sparse_method=False):
     else:
         _ma_rep = results.ma_rep(maxn=H)
 
+    #for x in _ma_rep:
+    #    sns.heatmap(x, annot=True)
+    #    plt.show()
+    #exit()
+
     GVD = np.zeros_like(SIGMA)
 
-    r, c = GVD.shape
-    for i in range(r):
-        for j in range(c):
-            GVD[i, j] = 1 / np.sqrt(SIGMA[i, i]) * sum([_ma_rep[h, i].dot(SIGMA[j]) ** 2 for h in range(H)]) / sum(
-                [_ma_rep[h, i, :].dot(SIGMA).dot(_ma_rep[h, i, :]) for h in range(H)])
-        GVD[i] /= GVD[i].sum()
+    if GVD_output:
+        r, c = GVD.shape
+        for i in range(r):
+            for j in range(c):
+                GVD[i, j] = 1 / np.sqrt(SIGMA[i, i]) * sum([_ma_rep[h, i].dot(SIGMA[j]) ** 2 for h in range(H)]) / sum(
+                    [_ma_rep[h, i, :].dot(SIGMA).dot(_ma_rep[h, i, :]) for h in range(H)])
+            GVD[i] /= GVD[i].sum()
 
     return pd.DataFrame(GVD), SIGMA, _ma_rep, results.resid
 
@@ -97,6 +103,7 @@ def BootstrapMult(resid, marep, iter, dummy=False):
                 simValues[t + 1] *= simValues[t] * (simReturns[t] + 1)
 
             dailyReturns.append(simValues[-1, :].sum() / simValues.shape[1])
+
     return dailyReturns
 
 
@@ -135,6 +142,10 @@ def zeroDeltaVar(data):
 
 def estimateAndBootstrap(df, H, iter, sparse_method=False):
     con, sigma, marep, resid = EstimateVAR(df, H, sparse_method=sparse_method)
+    df = pd.read_csv('data/dailyData.csv', sep=",", index_col=0)
+    df.index = pd.to_datetime(df.index)
+    df = np.log(df).diff().dropna() + 1
+
     returnSeries = BootstrapMult(resid, marep, iter)
     return np.percentile(returnSeries, 0.01), np.percentile(returnSeries, 0.05)
 
@@ -272,6 +283,7 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
         f.close()
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim1p, modelSim5p = model(trainingData[dateMemory:date], **kwargs)
+        print modelSim1p,modelSim5p
         results.loc[date] = [modelSim1p, modelSim5p]
 
     duration = (time.time() - timerStart) / len(results.index)
@@ -297,11 +309,11 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
 
 if __name__ == "__main__":
     df = pd.read_csv('data/minutedata3.csv', sep=",", index_col=0)
-    df.index = pd.to_datetime(df.index)
+    df.index = pd.to_datetime(df.index,format="""%d/%m/%Y %H:%M""")
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
 
-    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150808', memory=50,
+    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150403', memory=50,
                                    model=estimateAndBootstrap, H=15, iter=10000, sparse_method=True)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
