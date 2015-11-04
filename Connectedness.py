@@ -283,7 +283,6 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
         f.close()
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim1p, modelSim5p = model(trainingData[dateMemory:date], **kwargs)
-        print modelSim1p,modelSim5p
         results.loc[date] = [modelSim1p, modelSim5p]
 
     duration = (time.time() - timerStart) / len(results.index)
@@ -312,8 +311,7 @@ if __name__ == "__main__":
     df.index = pd.to_datetime(df.index,format="""%d/%m/%Y %H:%M""")
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
-
-    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20160403', memory=50,
+    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20150901', end='20150806', memory=50,
                                    model=estimateAndBootstrap, H=15, iter=10000, sparse_method=True)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
