@@ -312,7 +312,7 @@ if __name__ == "__main__":
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
     backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150806', memory=50,
-                                   model=estimateAndBootstrap, H=15, iter=10000, sparse_method=True)
+                                   model=estimateAndBootstrap, H=15, iter=10000, sparse_method=False)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
     file.write("After cleansing data, second run at backtesting the fully specified version\n \n")
