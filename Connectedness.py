@@ -142,11 +142,9 @@ def zeroDeltaVar(data):
 
 def estimateAndBootstrap(df, H, iter, sparse_method=False):
     con, sigma, marep, resid = EstimateVAR(df, H, sparse_method=sparse_method)
-    df = pd.read_csv('data/dailyData.csv', sep=",", index_col=0)
-    df.index = pd.to_datetime(df.index)
-    df = np.log(df).diff().dropna() + 1
-
     returnSeries = BootstrapMult(resid, marep, iter)
+
+
     return np.percentile(returnSeries, 0.01), np.percentile(returnSeries, 0.05)
 
 
