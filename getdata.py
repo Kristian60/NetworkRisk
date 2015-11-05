@@ -83,6 +83,11 @@ def EstimateVAR(df):
         tempdf = pd.DataFrame(i,columns=fevd.names)
         tempdf.to_csv('test/' + name + '.csv')
     exit()
+def FormatData():
+    df = pd.read_csv('data/minutedata3.csv',index_col = 0)
+    df.index = pd.to_datetime(df.index,format="%d/%m/%Y %H:%M")
+    df.to_csv('data/minutedata4.csv')
+    print df
 
 if __name__ == "__main__":
-    EstimateVAR('s')
+    FormatData()
