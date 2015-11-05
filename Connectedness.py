@@ -13,9 +13,12 @@ import datetime
 import sys
 
 if hasattr(sys, 'getwindowsversion'):
+    it = 1000
     import matplotlib.pyplot as plt
     import seaborn as sns
 
+else:
+    it = 10000
 t0 = time.time()
 
 pd.set_option('notebook_repr_html', True)
@@ -143,10 +146,12 @@ def zeroDeltaVar(data):
 def estimateAndBootstrap(df, H, iter, sparse_method=False):
     con, sigma, marep, resid = EstimateVAR(df, H, sparse_method=sparse_method)
     returnSeries = BootstrapMult(resid, marep, iter)
+    var1 = np.percentile(returnSeries, 1)
+    var5 = np.percentile(returnSeries, 5)
+    es1 =  np.mean(np.extract(returnSeries < var1, returnSeries))
+    es5 = np.mean(np.extract(returnSeries < var5, returnSeries))
 
-
-    return np.percentile(returnSeries, 0.01), np.percentile(returnSeries, 0.05)
-
+    return var1, var5, es1, es5
 
 def formalTests(results, realData):
     def unconditionalCoverage(events, p, t):
@@ -268,7 +273,7 @@ def formalTests(results, realData):
 
 
 def backtest(trainingData, realData, start, end, memory, model, **kwargs):
-    results = pd.DataFrame(columns=['VaR1', 'VaR5'], index=realData[start:end].index)
+    results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
     timerStart = time.time()
 
@@ -280,8 +285,8 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
         f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
         f.close()
         dateMemory = date - datetime.timedelta(days=memory)
-        modelSim1p, modelSim5p = model(trainingData[dateMemory:date], **kwargs)
-        results.loc[date] = [modelSim1p, modelSim5p]
+        modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date], **kwargs)
+        results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
 
     duration = (time.time() - timerStart) / len(results.index)
 
@@ -310,7 +315,7 @@ if __name__ == "__main__":
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
     backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150806', memory=50,
-                                   model=estimateAndBootstrap, H=15, iter=10000, sparse_method=False)
+                                   model=estimateAndBootstrap, H=15, iter=it, sparse_method=False)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
     file.write("After cleansing data, second run at backtesting the fully specified version\n \n")
