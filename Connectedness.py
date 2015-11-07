@@ -234,9 +234,8 @@ def formalTests(results, realData):
 
         LRind = -2 * np.log((np.power((1 - pi), n00 + n10) * np.power(pi, n01 + n11)) / (
             np.power(1 - pi0, n00) * np.power(pi0, n01) * np.power(1 - pi1, n10) * np.power(pi1, n11)))
-        LRpof = pofTest(events, p, t, raw_output=True)
 
-        return scipy.stats.chi2.cdf(LRind + LRpof, 2)
+        return scipy.stats.chi2.cdf(LRind, 1)
 
     def mixedKupiecTest(events, p, t):
 
@@ -248,7 +247,7 @@ def formalTests(results, realData):
             events = events[n:]
 
         LRpof = pofTest(events, p, t, raw_output=True)
-        return scipy.stats.chi2.cdf(LRind + LRpof, nEvents + 1)
+        return scipy.stats.chi2.cdf(LRpof, nEvents)
 
     data = pd.concat([results, realData], axis=1).dropna()
     data['e1'] = data[0] < data['VaR1']
@@ -315,7 +314,7 @@ if __name__ == "__main__":
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
     backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150806', memory=50,
-                                   model=estimateAndBootstrap, H=15, iter=it, sparse_method=False)
+                                   model=estimateAndBootstrap, H=15, iter=it, sparse_method=True)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
     file.write("After cleansing data, second run at backtesting the fully specified version\n \n")
