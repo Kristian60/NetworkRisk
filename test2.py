@@ -10,6 +10,9 @@ import datetime
 import statsmodels.tsa.api as sm
 from statsmodels.tsa.vector_ar.var_model import ma_rep
 import scipy.stats
+from scipy.stats import expon
+from matplotlib.dates import WeekdayLocator
+from collections import Counter
 
 def MakeMinute():
     df = pd.read_csv('data/full_data.csv',iterator=True,chunksize=10000)
@@ -84,9 +87,6 @@ def EstimateVARTest(data, H, sparse_method=False):
     print pd.DataFrame(SIGMA)-pd.DataFrame(GVD)
 
     return pd.DataFrame(GVD), SIGMA, _ma_rep, results.resid
-
-
-
 def VarSimul(data,H):
     model = sm.VAR(data)
     results = model.fit(H)
@@ -199,32 +199,24 @@ def WildBootstrap(data,H):
     plt.tight_layout()
     plt.show()
 def SOI(data,H):
-    months = []
-    sois = []
-    splits = 200
-    lens = int(len(data)/splits)
-    #for month in range(1,7):
-    ddate = datetime.datetime(2015,1,1)
-    #for mm in range(splits):
+    ddate = datetime.datetime(2013,3,1)
+    soidf = pd.DataFrame()
     while ddate<datetime.datetime(2015,7,1):
+        datestr2 = ddate.strftime('%Y%m%d')
+        datestr1 = (ddate-datetime.timedelta(50)).strftime('%Y%m%d')
+        print datestr1,datestr2, "        ",
+        td = data[datestr1:datestr2]
+        gvd,sigma,marep, resid = EstimateVAR(td,H,False,True)
+        soi = (len(gvd)-np.trace(np.array(gvd)))/len(gvd)
+        print soi
+        soidf.loc[td.index[-1].strftime("%Y%m%d"),'SOI'] = soi
         ddate += datetime.timedelta(1)
-        #td = data[mm*lens:(mm+1)*lens]
-        td = data
-        #print ddate
-        td.index = pd.to_datetime(td.index)
-        td = td[(td.index.month==ddate.month) & (td.index.day==ddate.day) & (td.index.year==ddate.year)]
-        if len(td)>0:
-            gvd,sigma,marep, resid = EstimateVAR(td,15)
-            soi = (len(gvd)-np.trace(np.array(gvd)))/len(gvd)
-            months.append(td.index[-1])
-            sois.append(soi)
-            #print soi
-    plt.plot_date(months,sois,fmt='-')
+        soidf.to_csv('SOI.csv')
+    plt.plot_date(soidf.index,soidf['SOI'],fmt='-')
     plt.title('Total Spillover Index')
     plt.xlabel('Date')
     plt.ylabel('SOI')
     plt.show()
-
 
 def VineCopula(dat):
     cp_dat = dat.rank() / ( len(dat) + 1 )
@@ -259,14 +251,74 @@ def VineCopula(dat):
 
     rv.test()
 
-if __name__ == "__main__":
-    data = pd.read_csv('data/minutedata2.csv',index_col=0)
-    data.index = pd.to_datetime(data.index)
-    #data = data.asfreq('5Min').dropna()
-    data = np.log(data).diff().dropna().iloc[:13000,:]
-    EstimateVARTest(data,15)
+def ExponBoot(data):
+    '''
+
+    :param data:
+    :return: array with bootstrapped resids
+    '''
+    ### LAV 2 FUNKTIONER SÅ DET INDLEDENDE LAVES I EN FUNKTION UDEN FOR LOOPET MED ITERATIONER
+    d1 = datetime.datetime(2013,03,1)
+    shapeval = 10
+    data = data[datetime.datetime(2013,3,1)-datetime.timedelta(50):'20130228']
+    data['days_since'] = [(d1-j).days+1 for j in data.index]
+    dsince = [1-expon.cdf(j,scale=shapeval) for j in list(np.unique(data['days_since']))]
+    dsince /=np.sum(dsince)
+    dsince = np.cumsum(sorted(dsince,reverse=False))
+    dlist = sorted(np.unique(data['days_since']),reverse=True)
+    klength = 395+15
+    uninumbers = np.random.uniform(size=klength)
+    a = [[j for j,i in zip(dlist,dsince) if uninumbers[k]<=i][0] for k in range(klength)]
+    b = np.array([random.choice(np.array(data[data['days_since']==i].iloc[:,:-1])) for i in a])
+    print pd.DataFrame(b)
+    print data
     exit()
-    WildBootstrap(data,15)
+    return b
+
+
+
+def ExponBoot2(data):
+    d1 = datetime.datetime(2013,03,1)
+
+    shapeval = 100
+
+    data = data[datetime.datetime(2013,3,1)-datetime.timedelta(50):'20130228']
+    data['days_since'] = [(d1-j).days+1 for j in data.index]
+    data['days_since_2'] = [1-expon.cdf(((d1-j).days+1),scale=shapeval) for j in data.index]
+    data['days_since_2'] /= np.sum(data['days_since_2'])
+    data['obs_since'] = [len(data)-j+1 for j in range(len(data))]
+    data['obs_since_2'] = [1-expon.cdf((len(data)-j+1)/10000,scale=shapeval) for j in range(len(data))]
+
+    data = data[::-1]
+
+    fig,ax = plt.subplots(1,2,figsize=(20,8))
+
+    ax = ax.ravel()
+
+    ax[0].plot(range(len(data)),data['obs_since_2'])
+    ax[0].set_yticklabels('')
+    ax[0].set_ylabel('Probability of being extracted in bootstrapping procedure')
+    ax[0].set_xlabel('Observations Since')
+    plt.xticks(range(len(data))[::1300])
+
+
+    ax[1].plot(range(len(data)),data['days_since_2'])
+    ax[1].set_yticklabels('')
+    ax[1].set_xlabel('Days Since')
+    plt.xticks(range(len(data))[::1300],data['days_since'][::1300])
+
+    plt.savefig('Graphs/ExponDecay.pdf',bbox_inches='tight')
+    plt.tight_layout()
+    plt.show()
+
+
+if __name__ == "__main__":
+    data = pd.read_csv('data/minutedata4.csv',index_col=0)
+    data.index = pd.to_datetime(data.index)
+    data = np.log(data).diff().dropna()
+    ExponBoot(data)
+    #SOI(data,15)
+
 
 
 
