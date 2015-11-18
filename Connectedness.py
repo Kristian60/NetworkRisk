@@ -294,6 +294,7 @@ def backtest(trainingData, realData, start, end, memory, model):
     timerStart = time.time()
     func = partial(btestthread,start,end,memory,model,trainingData,results)
     for nrthreads in [1,2,3,4,5,6,8,10,15,20,30,50,100]:
+        nrthreads = 25
         print nrthreads,
         t = results.iloc[:nrthreads,:].index
         pool = mp.Pool(nrthreads)
