@@ -278,7 +278,8 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
     timerStart = time.time()
 
     def btestthread(date):
-        print date
+        #print date
+        print str(date.year)+str(date.month).zfill(2)+str(date.day).zfill(2)
         f = open("log.txt", "w")
         f.write('start: ' + str(start) + '\n')
         f.write('end: ' + str(end) + '\n')
