@@ -279,7 +279,7 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
 
     def btestthread(date):
         #print date
-        print str(date.year)+str(date.month).zfill(2)+str(date.day).zfill(2)
+        #print str(date.year)+str(date.month).zfill(2)+str(date.day).zfill(2)
         f = open("log.txt", "w")
         f.write('start: ' + str(start) + '\n')
         f.write('end: ' + str(end) + '\n')
@@ -290,12 +290,18 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
         results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
         print time.time()-timerStart
 
-    nrthreads = 100
-    pool = ThreadPool(nrthreads)
-    pool.map(btestthread,pd.to_datetime(results.iloc[:nrthreads,:].index))
-    #pool.map(btestthread,results.index)
-    pool.close()
-    pool.join()
+    ttime = pd.DataFrame()
+    for nrthreads in [1,2,3,4,5,6,8,10,15,20,30,50,100]:
+        print nrthreads
+        timerStart = time.time()
+        #nrthreads = 100
+        pool = ThreadPool(nrthreads)
+        pool.map(btestthread,pd.to_datetime(results.iloc[:nrthreads,:].index))
+        #pool.map(btestthread,results.index)
+        pool.close()
+        pool.join()
+        ttime.loc[nrthreads,'dur'] = (time.time()-timerStart)/nrthreads
+        ttime.to_csv('nrofthreads.csv')
 
 
     duration = (time.time() - timerStart) / len(results.index)
