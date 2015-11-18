@@ -292,14 +292,16 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
 
     ttime = pd.DataFrame()
     for nrthreads in [1,2,3,4,5,6,8,10,15,20,30,50,100]:
-        print nrthreads
+
         timerStart = time.time()
-        #nrthreads = 100
+        nrthreads = 6
+        print nrthreads
         pool = ThreadPool(nrthreads)
-        pool.map(btestthread,pd.to_datetime(results.iloc[:nrthreads,:].index))
+        pool.map(btestthread,results.iloc[:nrthreads,:].index)
         #pool.map(btestthread,results.index)
         pool.close()
         pool.join()
+        print (time.time()-timerStart)/nrthreads
         ttime.loc[nrthreads,'dur'] = (time.time()-timerStart)/nrthreads
         ttime.to_csv('nrofthreads.csv')
 
