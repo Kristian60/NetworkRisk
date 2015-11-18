@@ -272,7 +272,7 @@ def formalTests(results, realData):
             christoffersenIFT(data['e5'], 0.05, t)]
 
 
-def backtest(trainingData, realData, start, end, memory, model, **kwargs):
+def backtestmultthread(trainingData, realData, start, end, memory, model, **kwargs):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
     timerStart = time.time()
@@ -288,13 +288,13 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date], **kwargs)
         results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
-        print time.time()-timerStart
+        #print time.time()-timerStart
 
     ttime = pd.DataFrame()
     for nrthreads in [1,2,3,4,5,6,8,10,15,20,30,50,100]:
 
         timerStart = time.time()
-        nrthreads = 6
+        #nrthreads = 1
         print nrthreads
         pool = ThreadPool(nrthreads)
         pool.map(btestthread,results.iloc[:nrthreads,:].index)
@@ -302,7 +302,6 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
         pool.close()
         pool.join()
         print (time.time()-timerStart)/nrthreads
-        exit()
         ttime.loc[nrthreads,'dur'] = (time.time()-timerStart)/nrthreads
         ttime.to_csv('nrofthreads.csv')
 
@@ -328,7 +327,7 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
     return backtestRapport
 
 
-def backtestOLD(trainingData, realData, start, end, memory, model, **kwargs):
+def backtest(trainingData, realData, start, end, memory, model, **kwargs):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
     timerStart = time.time()
