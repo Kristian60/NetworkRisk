@@ -302,6 +302,7 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
         pool.close()
         pool.join()
         print (time.time()-timerStart)/nrthreads
+        exit()
         ttime.loc[nrthreads,'dur'] = (time.time()-timerStart)/nrthreads
         ttime.to_csv('nrofthreads.csv')
 
