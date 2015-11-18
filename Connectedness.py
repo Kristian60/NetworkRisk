@@ -275,6 +275,11 @@ def formalTests(results, realData):
 def backtest(trainingData, realData, start, end, memory, model, **kwargs):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
+    print realData.iloc[:2]
+    print trainingData.iloc[1]
+    print trainingData.iloc[400]
+    exit()
+
     timerStart = time.time()
 
     def btestthread(date):
