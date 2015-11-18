@@ -275,11 +275,6 @@ def formalTests(results, realData):
 def backtest(trainingData, realData, start, end, memory, model, **kwargs):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
-    print realData.iloc[:2]
-    print trainingData.iloc[1]
-    print trainingData.iloc[400]
-    exit()
-
     timerStart = time.time()
 
     def btestthread(date):
@@ -297,9 +292,7 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
 
     nrthreads = 6
     pool = ThreadPool(nrthreads)
-    print results.iloc[:nrthreads,:]
-    exit()
-    pool.map(btestthread,results.iloc[:nrthreads,:].index)
+    pool.map(btestthread,pd.to_datetime(results.iloc[:nrthreads,:].index))
     #pool.map(btestthread,results.index)
     pool.close()
     pool.join()
