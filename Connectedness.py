@@ -11,6 +11,7 @@ import time
 from statsmodels.tsa.vector_ar.var_model import ma_rep
 import datetime
 import sys
+from multiprocessing.dummy import Pool as ThreadPool
 
 if hasattr(sys, 'getwindowsversion'):
     it = 1000
@@ -272,6 +273,52 @@ def formalTests(results, realData):
 
 
 def backtest(trainingData, realData, start, end, memory, model, **kwargs):
+    results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
+
+    timerStart = time.time()
+
+    def btestthread(date):
+        print date
+        f = open("log.txt", "w")
+        f.write('start: ' + str(start) + '\n')
+        f.write('end: ' + str(end) + '\n')
+        f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
+        f.close()
+        dateMemory = date - datetime.timedelta(days=memory)
+        modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date], **kwargs)
+        results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
+        print time.time()-timerStart
+
+    nrthreads = 6
+    pool = ThreadPool(nrthreads)
+    #threadres = pool.map(btestthread,results.iloc[:nrthreads,:].index)
+    threadres = pool.map(btestthread,results.index)
+    pool.close()
+    pool.join()
+
+
+    duration = (time.time() - timerStart) / len(results.index)
+
+    tests = formalTests(results, realData)
+    tests.append(duration)
+    backtestRapport = pd.DataFrame([t for t in tests]
+                                   , index=[
+            'unconditional coverage 1%',
+            'unconditional coverage 5%',
+            'proportion of failures 1%',
+            'proportion of failures 5%',
+            'time until first failure 1%',
+            'time until first failure 5%',
+            'Christoffersen ift 1%',
+            'Christoffersen ift 5%',
+            'mixed Kupiec test 1%',
+            'mixed Kupiec test 5%',
+            'comp.duration per day'])
+
+    return backtestRapport
+
+
+def backtestOLD(trainingData, realData, start, end, memory, model, **kwargs):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
     timerStart = time.time()
