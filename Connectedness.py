@@ -290,7 +290,7 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
         results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
         print time.time()-timerStart
 
-    nrthreads = 6
+    nrthreads = 100
     pool = ThreadPool(nrthreads)
     pool.map(btestthread,pd.to_datetime(results.iloc[:nrthreads,:].index))
     #pool.map(btestthread,results.index)
