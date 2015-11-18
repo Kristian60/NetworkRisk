@@ -89,13 +89,14 @@ def BootstrapMult(resid, marep, iter, dummy=False):
 
     dailyReturns = []
 
+    residNp = resid.values
     for i in range(iter):
         # t0 = datetime.datetime.now()
 
         simReturns = np.zeros((periods, nAssets))
         simValues = np.ones((periods + 1, nAssets))
 
-        shockMatrix = np.array([random.choice(resid.values) for x in range(len(simReturns) + 15)])
+        shockMatrix = np.array([random.choice(residNp) for x in range(len(simReturns) + 15)])
         impulseResponseSystem = marep[::-1]  # Invert impulse responses to fit DataFrame
 
         if dummy == True:
@@ -338,7 +339,7 @@ def backtestOLD(trainingData, realData, start, end, memory, model, **kwargs):
         f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
         f.close()
         dateMemory = date - datetime.timedelta(days=memory)
-        modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date], **kwargs)
+        modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date])
         results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
 
     duration = (time.time() - timerStart) / len(results.index)
