@@ -11,7 +11,8 @@ import time
 from statsmodels.tsa.vector_ar.var_model import ma_rep
 import datetime
 import sys
-from multiprocessing.dummy import Pool as ThreadPool
+from functools import partial
+import multiprocessing as mp
 
 if hasattr(sys, 'getwindowsversion'):
     it = 1000
@@ -19,7 +20,7 @@ if hasattr(sys, 'getwindowsversion'):
     import seaborn as sns
 
 else:
-    it = 10000
+    it = 1000
 t0 = time.time()
 
 pd.set_option('notebook_repr_html', True)
@@ -144,9 +145,11 @@ def zeroDeltaVar(data):
     return _mean - z1 * _std, _mean - z5 * _std
 
 
-def estimateAndBootstrap(df, H, iter, sparse_method=False):
+def estimateAndBootstrap(df):
+    H = 15
+    sparse_method = False
     con, sigma, marep, resid = EstimateVAR(df, H, sparse_method=sparse_method)
-    returnSeries = BootstrapMult(resid, marep, iter)
+    returnSeries = BootstrapMult(resid, marep, it)
     var1 = np.percentile(returnSeries, 1)
     var5 = np.percentile(returnSeries, 5)
     es1 =  np.mean(np.extract(returnSeries < var1, returnSeries))
@@ -271,39 +274,36 @@ def formalTests(results, realData):
             christoffersenIFT(data['e1'], 0.01, t),
             christoffersenIFT(data['e5'], 0.05, t)]
 
+def btestthread(start,end,memory,model,trainingData,results,date):
+    #print date
+    f = open("log.txt", "w")
+    f.write('start: ' + str(start) + '\n')
+    f.write('end: ' + str(end) + '\n')
+    f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
+    f.close()
+    dateMemory = date - datetime.timedelta(days=memory)
+    modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date])
+    results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
+    #print time.time()-timerStart
+    return [date,modelSim1p, modelSim5p, modelSimES1, modelSimES5]
 
-def backtestmultthread(trainingData, realData, start, end, memory, model, **kwargs):
+
+def backtest(trainingData, realData, start, end, memory, model):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
     timerStart = time.time()
 
-    def btestthread(date):
-        #print date
-        #print str(date.year)+str(date.month).zfill(2)+str(date.day).zfill(2)
-        f = open("log.txt", "w")
-        f.write('start: ' + str(start) + '\n')
-        f.write('end: ' + str(end) + '\n')
-        f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
-        f.close()
-        dateMemory = date - datetime.timedelta(days=memory)
-        modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date], **kwargs)
-        results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
-        #print time.time()-timerStart
-
-    ttime = pd.DataFrame()
     for nrthreads in [1,2,3,4,5,6,8,10,15,20,30,50,100]:
-
+        print nrthreads,
+        t = results.iloc[:nrthreads,:].index
+        func = partial(btestthread,start,end,memory,model,trainingData,results)
+        pool = mp.Pool(nrthreads)
         timerStart = time.time()
-        #nrthreads = 1
-        print nrthreads
-        pool = ThreadPool(nrthreads)
-        pool.map(btestthread,results.iloc[:nrthreads,:].index)
-        #pool.map(btestthread,results.index)
+        output = pool.map(func,t)
         pool.close()
         pool.join()
         print (time.time()-timerStart)/nrthreads
-        ttime.loc[nrthreads,'dur'] = (time.time()-timerStart)/nrthreads
-        ttime.to_csv('nrofthreads.csv')
+    exit()
 
 
     duration = (time.time() - timerStart) / len(results.index)
@@ -327,7 +327,7 @@ def backtestmultthread(trainingData, realData, start, end, memory, model, **kwar
     return backtestRapport
 
 
-def backtest(trainingData, realData, start, end, memory, model, **kwargs):
+def backtestOLD(trainingData, realData, start, end, memory, model, **kwargs):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
     timerStart = time.time()
@@ -370,7 +370,7 @@ if __name__ == "__main__":
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
     backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150806', memory=50,
-                                   model=estimateAndBootstrap, H=15, iter=it, sparse_method=True)
+                                   model=estimateAndBootstrap)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
     file.write("After cleansing data, second run at backtesting the fully specified version\n \n")

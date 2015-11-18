@@ -15,6 +15,11 @@ from graphical_lasso import graphical_lasso
 import Quandl
 from matplotlib.dates import YearLocator, MonthLocator, DateFormatter, WeekdayLocator
 
+
+pd.set_option('notebook_repr_html', True)
+pd.set_option('display.max_columns', 300)
+pd.set_option('display.width', 3000)
+
 def StockMarket():
     ###############################################################################
     # Retrieve the data from Internet
