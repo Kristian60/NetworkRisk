@@ -292,11 +292,10 @@ def backtest(trainingData, realData, start, end, memory, model):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
     timerStart = time.time()
-
+    func = partial(btestthread,start,end,memory,model,trainingData,results)
     for nrthreads in [1,2,3,4,5,6,8,10,15,20,30,50,100]:
         print nrthreads,
         t = results.iloc[:nrthreads,:].index
-        func = partial(btestthread,start,end,memory,model,trainingData,results)
         pool = mp.Pool(nrthreads)
         timerStart = time.time()
         output = pool.map(func,t)
