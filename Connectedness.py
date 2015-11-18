@@ -291,8 +291,8 @@ def backtest(trainingData, realData, start, end, memory, model, **kwargs):
 
     nrthreads = 6
     pool = ThreadPool(nrthreads)
-    #threadres = pool.map(btestthread,results.iloc[:nrthreads,:].index)
-    threadres = pool.map(btestthread,results.index)
+    pool.map(btestthread,results.iloc[:nrthreads,:].index)
+    #pool.map(btestthread,results.index)
     pool.close()
     pool.join()
 
