@@ -13,6 +13,7 @@ import datetime
 import sys
 from functools import partial
 import multiprocessing as mp
+import HelpFunctions
 
 if hasattr(sys, 'getwindowsversion'):
     it = 1000
@@ -51,12 +52,7 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     else:
         _ma_rep = results.ma_rep(maxn=H)
 
-    #for x in _ma_rep:
-    #    sns.heatmap(x, annot=True)
-    #    plt.show()
-    #exit()
-
-    GVD = np.zeros_like(SIGMA)
+    GVD = np.empty_like(SIGMA)
 
     if GVD_output:
         r, c = GVD.shape
@@ -69,16 +65,16 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     return pd.DataFrame(GVD), SIGMA, _ma_rep, results.resid
 
 
-def BootstrapMult(resid, marep, iter, dummy=False):
+def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
     '''
 
     Ikke færdiggjort.
-    Funktionene skal replikere "iter" perioders afkast af "periods" længde ved at bootstrappe shockvektorer fra
+    Funktionene skal replikere "nIterations" perioders afkast af "periods" længde ved at bootstrappe shockvektorer fra
     "resid"
 
     :param resid:
     :param marep:
-    :param iter:
+    :param nIterations:
     :return:
     '''
 
@@ -92,16 +88,17 @@ def BootstrapMult(resid, marep, iter, dummy=False):
     residNp = resid.values
     impulseResponseSystem = marep[::-1]  # Invert impulse responses to fit DataFrame
 
-    simR = np.empty((periods,nAssets))
-    simV = np.ones((periods+1,nAssets))
-    shockM = np.array([[random.choice(residNp) for x in range(len(simR) + 15)] for nn in range(iter)])
+    simR = np.empty((periods, nAssets))
+    simV = np.ones((periods + 1, nAssets))
+    if decay:
+        shockM = HelpFunctions.bootstrapExpDecay(resid, nIterations)
+    else:
+        shockM = np.array([[random.choice(residNp) for x in range(len(simR) + 15)] for nn in range(nIterations)])
 
-    for i in range(iter):
-
+    for i in range(nIterations):
         simReturns = simR.copy()
         simValues = simV.copy()
         shockMatrix = shockM[i]
-
 
         if dummy == True:
             pseudoReturn = np.product(np.sum(shockMatrix[15:] + 1, axis=1) / 11)
@@ -157,10 +154,11 @@ def estimateAndBootstrap(df):
     returnSeries = BootstrapMult(resid, marep, it)
     var1 = np.percentile(returnSeries, 1)
     var5 = np.percentile(returnSeries, 5)
-    es1 =  np.mean(np.extract(returnSeries < var1, returnSeries))
+    es1 = np.mean(np.extract(returnSeries < var1, returnSeries))
     es5 = np.mean(np.extract(returnSeries < var5, returnSeries))
 
     return var1, var5, es1, es5
+
 
 def formalTests(results, realData):
     def unconditionalCoverage(events, p, t):
@@ -279,8 +277,9 @@ def formalTests(results, realData):
             christoffersenIFT(data['e1'], 0.01, t),
             christoffersenIFT(data['e5'], 0.05, t)]
 
-def btestthread(start,end,memory,model,trainingData,results,date):
-    #print date
+
+def btestthread(start, end, memory, model, trainingData, results, date):
+    # print date
     f = open("log.txt", "w")
     f.write('start: ' + str(start) + '\n')
     f.write('end: ' + str(end) + '\n')
@@ -289,23 +288,24 @@ def btestthread(start,end,memory,model,trainingData,results,date):
     dateMemory = date - datetime.timedelta(days=memory)
     modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date])
     results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
-    #print time.time()-timerStart
-    return [date,modelSim1p, modelSim5p, modelSimES1, modelSimES5]
+    # print time.time()-timerStart
+    return [date, modelSim1p, modelSim5p, modelSimES1, modelSimES5]
+
+
 def backtestthread(trainingData, realData, start, end, memory, model):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
     timerStart = time.time()
-    func = partial(btestthread,start,end,memory,model,trainingData,results)
-    for nrthreads in [1,2,3,4,5,6,8,10,15,20,30,50,100]:
+    func = partial(btestthread, start, end, memory, model, trainingData, results)
+    for nrthreads in [1, 2, 3, 4, 5, 6, 8, 10, 15, 20, 30, 50, 100]:
         nrthreads = 1
-        t = results.iloc[:nrthreads,:].index
+        t = results.iloc[:nrthreads, :].index
         pool = mp.Pool(nrthreads)
         timerStart = time.time()
-        output = pool.map(func,t)
+        output = pool.map(func, t)
         pool.close()
         pool.join()
-        print (time.time()-timerStart)/nrthreads
-
+        print (time.time() - timerStart) / nrthreads
 
     duration = (time.time() - timerStart) / len(results.index)
 
@@ -343,6 +343,8 @@ def backtest(trainingData, realData, start, end, memory, model):
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date])
         results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
+        print results.loc[date]
+        exit()
 
     duration = (time.time() - timerStart) / len(results.index)
 
@@ -371,7 +373,7 @@ if __name__ == "__main__":
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
     backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150805', memory=50,
-                                   model=estimateAndBootstrap)
+                               model=estimateAndBootstrap)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
     file.write("After cleansing data, second run at backtesting the fully specified version\n \n")
