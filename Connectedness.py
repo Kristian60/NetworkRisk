@@ -13,6 +13,7 @@ import datetime
 import sys
 from functools import partial
 import multiprocessing as mp
+from scipy.stats import expon
 
 if hasattr(sys, 'getwindowsversion'):
     it = 1000
