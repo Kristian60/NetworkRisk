@@ -195,6 +195,7 @@ def StockMarket():
     # Cluster using affinity propagation
 
     _, labels = cluster.affinity_propagation(covariance_)
+
     n_labels = labels.max()
 
     for i in range(n_labels + 1):
@@ -291,6 +292,7 @@ def StockMarket():
              embedding[1].max() + .20 * embedding[1].ptp())
 
     plt.savefig('Graphs/StockCluster.pdf',bbox_inches='tight')
+    plt.savefig('Graphs/StockCluster.svg',bbox_inches='tight')
     plt.show()
 
 def OilPrice():
@@ -309,6 +311,5 @@ def OilPrice():
 
 
 if __name__ == "__main__":
-    OilPrice()
-    exit()
+
     StockMarket()

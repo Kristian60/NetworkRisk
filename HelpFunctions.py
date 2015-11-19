@@ -21,9 +21,12 @@ def DaysSince(data):
     dsince = np.cumsum(sorted(dsince,reverse=False))
     dsince = (sorted(dsince,reverse=True))
     dlist = sorted(np.unique(data['days_since']),reverse=False)
+    dsince /= np.sum(dsince)
+    dsince = np.cumsum(dsince)
     u = np.random.uniform(size=10000)
     vals = np.digitize(u,dsince)
     klength = 390+15
+    klength = 10000
     return np.array(data),dlist,dsince,klength
 def ExponBoot(data,dlist,dsince,klength):
     '''
@@ -32,7 +35,15 @@ def ExponBoot(data,dlist,dsince,klength):
     :return: array with bootstrapped resids
     '''
     uninumbers = np.random.uniform(size=klength)
+
+
     a = [[j for j,i in zip(dlist,dsince) if uninumbers[k]<=i][0] for k in range(klength)]
+
+    cc = Counter(a)
+    plt.bar(cc.keys(),cc.values())
+    plt.show()
+    exit()
+
     b = np.array([random.choice(np.extract(data[:,-1]==i,data)) for i in a])
     return b
 

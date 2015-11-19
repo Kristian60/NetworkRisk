@@ -90,14 +90,14 @@ def BootstrapMult(resid, marep, iter, dummy=False):
     dailyReturns = []
 
     residNp = resid.values
+    impulseResponseSystem = marep[::-1]  # Invert impulse responses to fit DataFrame
     for i in range(iter):
         # t0 = datetime.datetime.now()
 
         simReturns = np.zeros((periods, nAssets))
         simValues = np.ones((periods + 1, nAssets))
-
         shockMatrix = np.array([random.choice(residNp) for x in range(len(simReturns) + 15)])
-        impulseResponseSystem = marep[::-1]  # Invert impulse responses to fit DataFrame
+
 
         if dummy == True:
             pseudoReturn = np.product(np.sum(shockMatrix[15:] + 1, axis=1) / 11)
