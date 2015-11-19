@@ -343,8 +343,6 @@ def backtest(trainingData, realData, start, end, memory, model):
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date])
         results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
-        print results.loc[date]
-        exit()
 
     duration = (time.time() - timerStart) / len(results.index)
 
