@@ -370,7 +370,7 @@ if __name__ == "__main__":
     df.index = pd.to_datetime(df.index)
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
-    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20130305', memory=50,
+    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150805', memory=50,
                                    model=estimateAndBootstrap)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")

@@ -26,7 +26,6 @@ def DaysSince(data):
     u = np.random.uniform(size=10000)
     vals = np.digitize(u,dsince)
     klength = 390+15
-    klength = 10000
     return np.array(data),dlist,dsince,klength
 def ExponBoot(data,dlist,dsince,klength):
     '''
@@ -34,17 +33,15 @@ def ExponBoot(data,dlist,dsince,klength):
     :param data:
     :return: array with bootstrapped resids
     '''
-    uninumbers = np.random.uniform(size=klength)
-
-
-    a = [[j for j,i in zip(dlist,dsince) if uninumbers[k]<=i][0] for k in range(klength)]
-
-    cc = Counter(a)
-    plt.bar(cc.keys(),cc.values())
-    plt.show()
+    uninumbers = np.random.uniform(size=(klength,10000))
+    t0 = datetime.datetime.now()
+    a = np.array([[[j for j,i in zip(dlist,dsince) if uninumbers[k,q]<=i][0] for k in range(klength)] for q in range(10000)])
+    print datetime.datetime.now()-t0
+    t0 = datetime.datetime.now()
+    b = np.array([[random.choice(np.extract(data[:,-1]==i,data)) for i in a[q,:]] for q in range(10000)])
+    print datetime.datetime.now()-t0
+    print b.shape
     exit()
-
-    b = np.array([random.choice(np.extract(data[:,-1]==i,data)) for i in a])
     return b
 
 def Test(data):
