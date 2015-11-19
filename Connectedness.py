@@ -20,7 +20,7 @@ if hasattr(sys, 'getwindowsversion'):
     import seaborn as sns
 
 else:
-    it = 1000
+    it = 10000
 t0 = time.time()
 
 pd.set_option('notebook_repr_html', True)
@@ -91,12 +91,16 @@ def BootstrapMult(resid, marep, iter, dummy=False):
 
     residNp = resid.values
     impulseResponseSystem = marep[::-1]  # Invert impulse responses to fit DataFrame
-    for i in range(iter):
-        # t0 = datetime.datetime.now()
 
-        simReturns = np.zeros((periods, nAssets))
-        simValues = np.ones((periods + 1, nAssets))
-        shockMatrix = np.array([random.choice(residNp) for x in range(len(simReturns) + 15)])
+    simR = np.empty((periods,nAssets))
+    simV = np.ones((periods+1,nAssets))
+    shockM = np.array([[random.choice(residNp) for x in range(len(simR) + 15)] for nn in range(iter)])
+
+    for i in range(iter):
+
+        simReturns = simR.copy()
+        simValues = simV.copy()
+        shockMatrix = shockM[i]
 
 
         if dummy == True:
@@ -287,9 +291,7 @@ def btestthread(start,end,memory,model,trainingData,results,date):
     results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
     #print time.time()-timerStart
     return [date,modelSim1p, modelSim5p, modelSimES1, modelSimES5]
-
-
-def backtest(trainingData, realData, start, end, memory, model):
+def backtestthread(trainingData, realData, start, end, memory, model):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
     timerStart = time.time()
@@ -326,7 +328,7 @@ def backtest(trainingData, realData, start, end, memory, model):
     return backtestRapport
 
 
-def backtestOLD(trainingData, realData, start, end, memory, model, **kwargs):
+def backtest(trainingData, realData, start, end, memory, model):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
     timerStart = time.time()
@@ -368,7 +370,7 @@ if __name__ == "__main__":
     df.index = pd.to_datetime(df.index)
     df = np.log(df).diff().dropna()
     print "data loaded", time.time() - t0
-    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150806', memory=50,
+    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20130305', memory=50,
                                    model=estimateAndBootstrap)
 
     file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
