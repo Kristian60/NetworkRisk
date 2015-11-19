@@ -79,7 +79,7 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
     '''
 
     # Number of periods to simulate, and length of the response to shocks
-    periods = int(60 * 6.5)  # en dag i minutter
+    periods = int(60 * 6.5+1)  # en dag i minutter
     responseLength = len(marep)
     nAssets = len(marep[0])
 
