@@ -181,7 +181,7 @@ def estimateAndBootstrap(df):
     es1 = np.mean(np.extract(returnSeries < var1, returnSeries))
     es5 = np.mean(np.extract(returnSeries < var5, returnSeries))
 
-    return var1, var5, es1, es5
+    return var1, var5, es1, es5, returnSeries
 
 
 def formalTests(results, realData):
@@ -364,8 +364,10 @@ def backtest(trainingData, realData, start, end, memory, model):
         f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
         f.close()
         dateMemory = date - datetime.timedelta(days=memory)
-        modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date])
+        modelSim1p, modelSim5p, modelSimES1, modelSimES5, returnSeries = model(trainingData[dateMemory:date])
         results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
+        if not modelSim5p > 0.9 or not modelSimES5 > 0.5:
+            pd.DataFrame(returnSeries).to_csv('ErrornusDay_' + date.strftime("%Y-%m-%d") + '.csv')
 
     duration = (time.time() - timerStart) / len(results.index)
 
