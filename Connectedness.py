@@ -140,8 +140,8 @@ def bootstrapExpDecay(data, nIterations):
 
 
 def realizedDaily(day=False):
-    df = pd.read_csv('data/dailyData.csv', sep=",", index_col=0)
-    df.index = pd.to_datetime(df.index)
+    df = pd.read_csv('data/dailyData_e.csv', sep=",", index_col=0)
+    df.index = pd.to_datetime(df.index, format="%Y-%m-%d")
     df = np.log(df).diff().dropna() + 1
 
     if not day:
@@ -182,7 +182,7 @@ def estimateAndBootstrap(df):
     es1 = np.mean(np.extract(returnSeries < var1, returnSeries))
     es5 = np.mean(np.extract(returnSeries < var5, returnSeries))
 
-    return var1, var5, es1, es5
+    return var1, var5, es1, es5, returnSeries
 
 
 def formalTests(results, realData):
@@ -355,7 +355,6 @@ def backtestthread(trainingData, realData, start, end, memory, model):
 
 def backtest(trainingData, realData, start, end, memory, model):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
-
     timerStart = time.time()
 
     for date in results.index:
@@ -366,8 +365,10 @@ def backtest(trainingData, realData, start, end, memory, model):
         f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
         f.close()
         dateMemory = date - datetime.timedelta(days=memory)
-        modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date])
+        modelSim1p, modelSim5p, modelSimES1, modelSimES5, returnSeries = model(trainingData[dateMemory:date])
         results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
+        if not modelSim5p > 0.9 or not modelSimES5 > 0.5:
+            pd.DataFrame(returnSeries).to_csv('ErrornusDay_' + date.strftime("%Y-%m-%d") + '.csv')
 
     duration = (time.time() - timerStart) / len(results.index)
 
@@ -394,6 +395,11 @@ if __name__ == "__main__":
     df = pd.read_csv('data/minutedata4.csv', sep=",", index_col=0)
     df.index = pd.to_datetime(df.index)
     df = np.log(df).diff().dropna()
+    temp = df.resample("d",how="count")
+    valid = temp[temp.isin([390,391])].dropna().index
+    select = [x in valid for x in df.index.date]
+    df = df[select]
+
     print "data loaded", time.time() - t0
     backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150805', memory=50,
                                model=estimateAndBootstrap)
