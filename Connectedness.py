@@ -111,6 +111,7 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
 
             dailyReturns.append(simValues[-1, :].sum() / simValues.shape[1])
 
+    print "  "
     return dailyReturns
 
 def bootstrapExpDecay(data, nIterations):
