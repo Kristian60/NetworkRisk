@@ -43,6 +43,7 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     SIGMA = np.cov(results.resid.T)
 
     if sparse_method == True:
+        exit("METODEN BRUGER RESULTS.COEFS FREM FOR PARAMS")
         _nAssets = results.params.shape[1]
         _nLags = results.params.shape[0] / results.params.shape[1]
 
@@ -111,7 +112,6 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
 
             dailyReturns.append(simValues[-1, :].sum() / simValues.shape[1])
 
-    print "  "
     return dailyReturns
 
 def bootstrapExpDecay(data, nIterations):
