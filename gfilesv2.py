@@ -11,7 +11,7 @@ flist = sorted(os.listdir('Z:/TAQ/TAQHDF5/'))
 slist = os.listdir('data/taq/')
 
 for ff in flist[::-1]:
-    print ff
+    print ff,
     if ff.replace('taq_', '')[:4] >= '2001' and ff.replace('taq_', '')[:4] < '2014' and str(ff).replace('taq_','').replace('h5','csv') not in slist:
         t0=datetime.datetime.now()
         f = h5py.File("Z:/TAQ/TAQHDF5/" + ff, 'r')
@@ -39,6 +39,5 @@ for ff in flist[::-1]:
         df['time'] = pd.to_datetime(df['utcsec'], unit='s')
         df.to_csv('data/taq/' + ff.replace('taq_', '').replace('.h5', '') + '.csv', columns=['time', 'price', 'sym'],
                           index=False)
-
 
         print datetime.datetime.now()-t0
