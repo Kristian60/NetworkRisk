@@ -96,19 +96,16 @@ def BGallo():
         return obs_dif <= acc
 
     for ff in os.listdir('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taq/'):
-        print ff,
-
         if (ff) not in os.listdir('data/taqclean'):
-            print "CLEANING"
+            print ff, "CLEANING"
             t = pd.read_csv('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taq/' + ff)
             t['time'] = pd.to_datetime(t['time'])
-
             k,d,y = 20,0.1,np.percentile(abs(t['price'].diff()).dropna(),95)
             fdf = pd.DataFrame()
 
             for j in np.unique(t['sym']):
                 tdf = t[t['sym']==j].reset_index(drop=True)
-                #tdf = tdf.set_index('time').resample('Min',how='last').reset_index(drop=False).ffill().bfill()
+                tdf = tdf.set_index('time').resample('Min',how='last').reset_index(drop=False).ffill().bfill()
                 df = np.array(tdf['price'])
                 remlist = []
                 for n in range(len(df)):
