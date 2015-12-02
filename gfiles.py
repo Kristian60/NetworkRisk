@@ -6,13 +6,15 @@ import numpy as np
 
 print "Start"
 flist = sorted(os.listdir('Z:/TAQ/TAQHDF5/'))
+slist = os.listdir('data/taq/')
 
 for ff in flist:
-    print ff,
-    if ff.replace('taq_', '')[:4] >= '2001' and ff.replace('taq_', '')[:4] < '2014':
+    print ff
+    if ff.replace('taq_', '')[:4] >= '2001' and ff.replace('taq_', '')[:4] < '2014' and str(ff).replace('taq_','').replace('h5','csv') not in slist:
+        slist = os.listdir('data/taq/')
         print "Downloading..."
         t0 = datetime.datetime.now()
-        # ff = 'taq_20131231.h5'
+        #ff = 'taq_20131231.h5'
         path = "Z:/TAQ/TAQHDF5/" + ff
         df = pd.read_hdf(path, 'Trades')
         ind = pd.read_hdf(path, 'TradeIndex')
