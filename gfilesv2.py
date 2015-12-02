@@ -13,6 +13,7 @@ slist = os.listdir('data/taq/')
 for ff in flist[::-1]:
     print ff,
     if ff.replace('taq_', '')[:4] >= '2001' and ff.replace('taq_', '')[:4] < '2014' and str(ff).replace('taq_','').replace('h5','csv') not in slist:
+        pd.DataFrame().to_csv('data/taq/' + ff.replace('taq_', '').replace('.h5', '') + '.csv')
         t0=datetime.datetime.now()
         f = h5py.File("Z:/TAQ/TAQHDF5/" + ff, 'r')
         symlist = 'AAPL AXP BA CAT CSCO CVX DD DIS GE GS HD IBM INTC JNJ JOM KO MCD MMM MRK MSFT NKE PFE PG TRV UNH UTX V VZ WMT XOM'.split(
