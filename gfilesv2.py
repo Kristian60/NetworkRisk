@@ -6,15 +6,15 @@ import datetime
 import numpy as np
 import os
 
-
 flist = sorted(os.listdir('Z:/TAQ/TAQHDF5/'))
-slist = os.listdir('data/taq/')
+# slist = os.listdir('data/taq/')
 
 for ff in flist[::-1]:
     print ff,
-    if ff.replace('taq_', '')[:4] >= '2001' and ff.replace('taq_', '')[:4] < '2014' and str(ff).replace('taq_','').replace('h5','csv') not in slist:
+    if ff.replace('taq_', '')[:4] >= '2001' and ff.replace('taq_', '')[:4] < '2014' and str(ff).replace('taq_','').replace('h5', 'csv') not in os.listdir('data/taq/'):
+        # slist = os.listdir('data/taq/')
         pd.DataFrame().to_csv('data/taq/' + ff.replace('taq_', '').replace('.h5', '') + '.csv')
-        t0=datetime.datetime.now()
+        t0 = datetime.datetime.now()
         f = h5py.File("Z:/TAQ/TAQHDF5/" + ff, 'r')
         symlist = 'AAPL AXP BA CAT CSCO CVX DD DIS GE GS HD IBM INTC JNJ JOM KO MCD MMM MRK MSFT NKE PFE PG TRV UNH UTX V VZ WMT XOM'.split(
             ' ')
@@ -25,20 +25,20 @@ for ff in flist[::-1]:
 
         df = []
         for i in ind.index:
-            start = int(ind.loc[i,'start'])
-            end = int(ind.loc[i,'end'])
+            start = int(ind.loc[i, 'start'])
+            end = int(ind.loc[i, 'end'])
             df.extend(f['Trades'][start:end])
 
         ind['count'] = np.cumsum(ind['count'])
         fr = 0
         df = pd.DataFrame(np.array(df))
         for i in ind.index:
-            to = int(ind.loc[i,'count'])
-            df.loc[fr:,'sym'] = ind.loc[i,'ticker']
+            to = int(ind.loc[i, 'count'])
+            df.loc[fr:, 'sym'] = ind.loc[i, 'ticker']
             fr = to
 
         df['time'] = pd.to_datetime(df['utcsec'], unit='s')
         df.to_csv('data/taq/' + ff.replace('taq_', '').replace('.h5', '') + '.csv', columns=['time', 'price', 'sym'],
-                          index=False)
+                  index=False)
 
-        print datetime.datetime.now()-t0
+        print datetime.datetime.now() - t0

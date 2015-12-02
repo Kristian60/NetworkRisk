@@ -96,8 +96,10 @@ def BGallo():
         return obs_dif <= acc
 
     for ff in os.listdir('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taq/'):
-        print ff
-        if str(ff)[:8]>='19990108':
+        print ff,
+
+        if (ff) not in os.listdir('data/taqclean'):
+            print "CLEANING"
             t = pd.read_csv('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taq/' + ff)
             t['time'] = pd.to_datetime(t['time'])
 
@@ -128,22 +130,7 @@ def BGallo():
             fdf.to_csv('data/taqclean/'+ ff.split('/')[-1])
 
 if __name__ == "__main__":
-
-    df = pd.read_csv('data/taq93-99.csv',index_col=0)
-    df = np.log(df).diff()
-    df = df[['GE']]
-
-    df = df['19970101':]
-
-    print df[df['GE']>0.08]
-
-
-    print np.max(df)
-
-    #df = np.log(df).diff()
-
-    df.plot()
-    plt.show()
+    BGallo()
     exit()
 
     #GetFiles()
