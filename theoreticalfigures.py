@@ -9,6 +9,7 @@ import matplotlib.ticker as plticker
 from scipy import stats
 from scipy.stats import expon
 import matplotlib
+from statsmodels.tsa.stattools import acf
 
 
 pd.set_option('notebook_repr_html', True)
@@ -169,10 +170,17 @@ def DescriptiveStatsandStylizedFacts():
     plt.savefig('Graphs/HeavyTails.pdf',bbox_inches='tight')
     plt.show()
     ##### Volatility Clustering
-    '''
 
     r = (np.sum(df,axis=1)/len(df))**2
-    plt.plot_date(r.index,r)
+    plt.plot_date(r.index,r,fmt='-',label='Squared Returns')
+    plt.legend(loc='best')
+    plt.savefig('Graphs/VolClustering.pdf',bbox_inches='tight')
+    plt.show()
+    '''
+    r = abs(np.sum(df,axis=1)/len(df))
+    r1 = (np.sum(df,axis=1)/len(df))
+    autocorrelation_plot(r)
+    #autocorrelation_plot(r1)
     plt.show()
 
 
