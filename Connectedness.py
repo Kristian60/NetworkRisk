@@ -28,7 +28,6 @@ pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
 
-
 def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     """
 
