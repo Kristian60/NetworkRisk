@@ -10,7 +10,7 @@ slist = os.listdir('data/taq/')
 
 for ff in flist[::-1]:
     print ff
-    if ff.replace('taq_', '')[:4] >= '2001' and ff.replace('taq_', '')[:4] < '2014' and str(ff).replace('taq_','').replace('h5','csv') not in slist:
+    if ff.replace('taq_', '')[:4] >= '2002' and ff.replace('taq_', '')[:4] < '2014' and str(ff).replace('taq_','').replace('h5','csv') not in slist:
         slist = os.listdir('data/taq/')
         print "Downloading..."
         t0 = datetime.datetime.now()
