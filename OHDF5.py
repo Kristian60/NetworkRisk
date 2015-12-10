@@ -96,17 +96,16 @@ def BGallo():
         return obs_dif <= acc
 
     for ff in os.listdir('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taq/'):
-        print ff
-        if str(ff)[:8]>='19990108':
+        if (ff) not in os.listdir('data/taqclean'):
+            print ff, "CLEANING"
             t = pd.read_csv('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taq/' + ff)
             t['time'] = pd.to_datetime(t['time'])
-
             k,d,y = 20,0.1,np.percentile(abs(t['price'].diff()).dropna(),95)
             fdf = pd.DataFrame()
 
             for j in np.unique(t['sym']):
                 tdf = t[t['sym']==j].reset_index(drop=True)
-                #tdf = tdf.set_index('time').resample('Min',how='last').reset_index(drop=False).ffill().bfill()
+                tdf = tdf.set_index('time').resample('Min',how='last').reset_index(drop=False).ffill().bfill()
                 df = np.array(tdf['price'])
                 remlist = []
                 for n in range(len(df)):
@@ -128,22 +127,7 @@ def BGallo():
             fdf.to_csv('data/taqclean/'+ ff.split('/')[-1])
 
 if __name__ == "__main__":
-
-    df = pd.read_csv('data/taq93-99.csv',index_col=0)
-    df = np.log(df).diff()
-    df = df[['GE']]
-
-    df = df['19970101':]
-
-    print df[df['GE']>0.08]
-
-
-    print np.max(df)
-
-    #df = np.log(df).diff()
-
-    df.plot()
-    plt.show()
+    BGallo()
     exit()
 
     #GetFiles()

@@ -395,11 +395,7 @@ if __name__ == "__main__":
     #df = pd.read_csv('data/minutedata4.csv', sep=",", index_col=0)
     df = pd.read_csv('data/taq93-99.csv', sep=",", index_col=0)
     df.index = pd.to_datetime(df.index)
-    print np.log(df).diff()
-    exit()
     df = np.log(df).diff().dropna()
-    print df
-    exit()
     temp = df.resample("d",how="count")
     valid = temp[temp.isin([390,391])].dropna().index
     select = [x in valid for x in df.index.date]
