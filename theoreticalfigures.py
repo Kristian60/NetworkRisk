@@ -7,7 +7,14 @@ import seaborn
 import pandas as pd
 import matplotlib.ticker as plticker
 from scipy import stats
+from scipy.stats import expon
 import matplotlib
+
+
+pd.set_option('notebook_repr_html', True)
+pd.set_option('display.max_columns', 300)
+pd.set_option('display.width', 3000)
+
 
 def VaR():
     a = np.random.normal(0,0.2,1000000)
@@ -120,8 +127,57 @@ def BGallo():
     plt.savefig('graphs/BrGalloAlgo.pdf',bbox_inches='tight')
     plt.show()
 
-if __name__  == "__main__":
-    BGallo()
+def DecayBoot():
+    a = [expon.pdf(j,scale=0.8) for j in np.arange(0,3,0.01)]
+    b = []
+    for i in np.linspace(1,3,10):
+        b.extend([expon.pdf(i) for j in range(390)])
+    fig,axs = plt.subplots(1,2)
+    print fig,axs
     exit()
-    FormalTests()
-    VaR()
+    axs = axs.ravel()
+    axs[0].plot(b)
+    axs[1].plot(a)
+    axs[0].set_yticks([''])
+    axs[1].set_yticks([''])
+    axs[0].set_xticks([''])
+    axs[1].set_xticks([''])
+    plt.show()
+
+def DescriptiveStatsandStylizedFacts():
+    df = pd.read_csv('data/taq93-99.csv',index_col=0)
+    df.index = pd.to_datetime(df.index)
+    df = np.log(df).diff()
+    ##### Descriptive Stats
+    '''
+    tdf = df.describe().T
+    for c in tdf.columns:
+        tdf = tdf.rename(columns={c:c.title()})
+    tdf.to_latex('DS.tex')
+    print df
+
+    ##### Stylized Facts
+    ##### Heavy Tails
+    r = np.array(df.replace(np.inf,np.nan).replace(-np.inf,np.nan).dropna()).ravel()
+    r = r[abs(r)<0.02]
+    bw = 0.001
+    seaborn.kdeplot(r,label='Return Data',bw=bw)
+    ndata = np.random.normal(np.mean(r),np.std(r),int(len(r)))
+    seaborn.kdeplot(ndata,label='Normally Distributed Data',bw=bw)
+    plt.xlim(-0.01,0.01)
+    plt.yticks([])
+    plt.savefig('Graphs/HeavyTails.pdf',bbox_inches='tight')
+    plt.show()
+    ##### Volatility Clustering
+    '''
+
+    r = (np.sum(df,axis=1)/len(df))**2
+    plt.plot_date(r.index,r)
+    plt.show()
+
+
+
+        #to_latex('DS.tex')
+
+if __name__  == "__main__":
+    DescriptiveStatsandStylizedFacts()
