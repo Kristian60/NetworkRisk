@@ -57,6 +57,8 @@ def SortFiles():
         #ff = 'data/taq/19930104.csv'
         print ff
         ddate = pd.to_datetime(ff.split('.')[0])
+        #if ddate.year == 1994:
+        #print ff
         df = pd.read_csv('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taqclean/' + ff)
         temp = pd.DataFrame(index=[datetime.datetime(1970,1,1,9,30)+datetime.timedelta(0,0,0,0,j) for j in range(391)])
         temp.index.name = 'time'
@@ -78,9 +80,9 @@ def AggFiles():
     :return:
     '''
     df = pd.DataFrame()
-    for ff in os.listdir('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taqagg/'):
+    for ff in os.listdir('D:/Speciale Data/taqclean/taqagg/'):
         print ff
-        temp = pd.read_csv('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taqagg/' + ff)
+        temp = pd.read_csv('D:/Speciale Data/taqclean/taqagg/' + ff)
         df = df.append(temp)
     df.rename(columns={'Unnamed: 0':'time'},inplace=True)
     df = df.set_index('time')
@@ -95,42 +97,45 @@ def BGallo():
         acc = 3*std+y
         return obs_dif <= acc
 
-    for ff in os.listdir('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taq/'):
-        if (ff) not in os.listdir('data/taqclean'):
-            print ff, "CLEANING"
-            t = pd.read_csv('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taq/' + ff)
-            t['time'] = pd.to_datetime(t['time'])
-            k,d,y = 20,0.1,np.percentile(abs(t['price'].diff()).dropna(),95)
-            fdf = pd.DataFrame()
+    for ff in os.listdir('G:/Speciale Data/'):
+        if (ff) not in os.listdir('G:/Speciale Data/taqclean/'):
+            try:
+                print ff, "CLEANING"
+                t = pd.read_csv('G:/Speciale Data/' + ff)
+                t['time'] = pd.to_datetime(t['time'])
+                fdf = pd.DataFrame()
 
-            for j in np.unique(t['sym']):
-                tdf = t[t['sym']==j].reset_index(drop=True)
-                tdf = tdf.set_index('time').resample('Min',how='last').reset_index(drop=False).ffill().bfill()
-                df = np.array(tdf['price'])
-                remlist = []
-                for n in range(len(df)):
-                    if n <= k/2:
-                        price = df[:k]
-                    elif n >= (len(df)-(k/2)):
-                        price = df[-k:]
-                    else:
-                        price = df[int(n-(k/2)):int(n+(k/2))]
-                    if len(df)>1:
-                        if BG_algo(list(price), d, y, df[n]) == False:
-                            remlist.append(n)
+                for j in np.unique(t['sym']):
+                    tdf = t[t['sym']==j].reset_index(drop=True)
+                    if len(tdf)>1:
+                        k,d,y = 20,0.1,np.percentile(abs(tdf['price'].diff()).dropna(),95)
+                        tdf = tdf.set_index('time').resample('Min',how='last').reset_index(drop=False).ffill().bfill()
+                        df = np.array(tdf['price'])
+                        remlist = []
+                        for n in range(len(df)):
+                            if n <= k/2:
+                                price = df[:k]
+                            elif n >= (len(df)-(k/2)):
+                                price = df[-k:]
+                            else:
+                                price = df[int(n-(k/2)):int(n+(k/2))]
+                            if len(df)>1:
+                                if BG_algo(list(price), d, y, df[n]) == False:
+                                    remlist.append(n)
 
-                tdf = tdf[~tdf.index.isin(remlist)]
-                tdf = tdf.ffill().bfill()
-                fdf = fdf.append(tdf)
+                        tdf = tdf[~tdf.index.isin(remlist)]
+                        tdf = tdf.ffill().bfill()
+                        fdf = fdf.append(tdf)
 
-            fdf = fdf.set_index('time')
-            fdf.to_csv('data/taqclean/'+ ff.split('/')[-1])
+                fdf = fdf.set_index('time')
+                fdf.to_csv('G:/Speciale Data/taqclean/'+ ff.split('/')[-1])
+            except TypeError:
+                print "ERROR"
+                error = pd.DataFrame()
+                error.loc[0,0] = str(ff)
+                error.to_csv('errors.csv',mode='a')
+
+
 
 if __name__ == "__main__":
     BGallo()
-    exit()
-
-    #GetFiles()
-    #BGallo()
-    SortFiles()
-    AggFiles()
