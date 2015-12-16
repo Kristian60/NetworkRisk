@@ -361,6 +361,7 @@ def backtest(trainingData, realData, start, end, memory, model):
     timerStart = time.time()
 
     for date in results.index:
+        dStart = time.time()
         print date
         f = open("log.txt", "w")
         f.write('start: ' + str(start) + '\n')
@@ -371,6 +372,7 @@ def backtest(trainingData, realData, start, end, memory, model):
         modelSim1p, modelSim5p, modelSimES1, modelSimES5, returnSeries = model(trainingData[dateMemory:date])
         results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
         results.to_csv('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv")
+        print time.time() - dStart
 
     duration = (time.time() - timerStart) / len(results.index)
 
