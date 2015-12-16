@@ -9,9 +9,9 @@ pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
 
-folder = "data/DividendSplit/"
+folder = "data/DividendSplit/correct/"
 
-df = pd.read_csv('data/taq93.csv', index_col=0)
+df = pd.read_csv('TData9313_final4.csv', index_col=0)
 df.index = pd.to_datetime(df.index)
 
 for file in os.listdir(folder):
@@ -20,7 +20,7 @@ for file in os.listdir(folder):
         a = df[ticker]
         f = pd.read_csv(folder + file, index_col=0, sep=";")
         f.index = pd.to_datetime(f.index, format="%b %d, %Y")
-
+        print ticker
         for n, line in f.iterrows():
             if line['type'].strip() == "Dividend":
                 scale = float(line['scale'])
@@ -35,3 +35,8 @@ for file in os.listdir(folder):
 
     except KeyError:
         print "Error:", ticker
+
+    except IndexError:
+        print "Index Error:", n
+
+df.to_csv('TData9313_final5.csv')

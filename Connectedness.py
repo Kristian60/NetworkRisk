@@ -22,6 +22,7 @@ if hasattr(sys, 'getwindowsversion'):
 
 else:
     it = 10000
+    import mailer
 t0 = time.time()
 
 pd.set_option('notebook_repr_html', True)
@@ -35,6 +36,7 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     :param H: integer, size of step ahead forecast
     :return: a dataframe of connectivity or concentration parameters
     """
+    data = data.dropna(axis=1,how='any')
 
     model = sm.VAR(data)
     results = model.fit(maxlags=H, ic='aic')
@@ -352,7 +354,8 @@ def backtestthread(trainingData, realData, start, end, memory, model):
     return backtestRapport
 
 
-def backtest(trainingData, realData, start, end, memory, model):
+def backtest(trainingData,realData, start, end, memory, model):
+
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
     timerStart = time.time()
 
@@ -366,8 +369,7 @@ def backtest(trainingData, realData, start, end, memory, model):
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim1p, modelSim5p, modelSimES1, modelSimES5, returnSeries = model(trainingData[dateMemory:date])
         results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
-        if not modelSim5p > 0.9 or not modelSimES5 > 0.5:
-            pd.DataFrame(returnSeries).to_csv('ErrornusDay_' + date.strftime("%Y-%m-%d") + '.csv')
+        results.to_csv('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv")
 
     duration = (time.time() - timerStart) / len(results.index)
 
@@ -391,21 +393,24 @@ def backtest(trainingData, realData, start, end, memory, model):
 
 
 if __name__ == "__main__":
-    #df = pd.read_csv('data/minutedata4.csv', sep=",", index_col=0)
-    df = pd.read_csv('data/taq93-99.csv', sep=",", index_col=0)
-    df.index = pd.to_datetime(df.index)
-    df = np.log(df).diff().dropna()
-    temp = df.resample("d",how="count")
-    valid = temp[temp.isin([390,391])].dropna().index
-    select = [x in valid for x in df.index.date]
-    df = df[select]
+    try:
+        df = pd.read_csv('TData9313_final5.csv', sep=",", index_col=0)
+        print "data loaded", time.time() - t0
+        df.index = pd.to_datetime(df.index)
+        daily = df.resample('d',how='last').dropna(how='all')
+        df = np.log(df).diff().dropna(how='all')
+        daily = np.log(daily).diff().dropna(how='all')
 
-    print "data loaded", time.time() - t0
-    backtest_output = backtest(trainingData=df, realData=realizedDaily(), start='20130301', end='20150805', memory=50,
-                               model=estimateAndBootstrap)
+        backtest_output = backtest(trainingData=df, realData=daily, start='19940301', end='20150101', memory=50,
+                                   model=estimateAndBootstrap)
 
-    file = open("basemodel" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
-    file.write("After cleansing data, second run at backtesting the fully specified version\n \n")
-    for a, b in zip(backtest_output.index, backtest_output.values):
-        file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
-    file.close()
+        file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
+        for a, b in zip(backtest_output.index, backtest_output.values):
+            file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
+        file.close()
+        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'holden750@gmail.com', 'Ireren er færdig')
+        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'thorup.dk@gmail.com', 'Ireren er færdig')
+
+    except:
+        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'holden750@gmail.com', 'Ireren har fejlet')
+        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'thorup.dk@gmail.com', 'Ireren har fejlet')
