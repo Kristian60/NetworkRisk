@@ -29,6 +29,7 @@ pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
 
+
 def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     """
 
@@ -36,7 +37,7 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     :param H: integer, size of step ahead forecast
     :return: a dataframe of connectivity or concentration parameters
     """
-    data = data.dropna(axis=1,how='any')
+    data = data.dropna(axis=1, how='any')
 
     model = sm.VAR(data)
     results = model.fit(maxlags=H, ic='aic')
@@ -81,7 +82,7 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
     '''
 
     # Number of periods to simulate, and length of the response to shocks
-    periods = int(60 * 6.5+1)  # en dag i minutter
+    periods = int(60 * 6.5 + 1)  # en dag i minutter
     responseLength = len(marep)
     nAssets = len(marep[0])
 
@@ -114,6 +115,7 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
             dailyReturns.append(simValues[-1, :].sum() / simValues.shape[1])
 
     return dailyReturns
+
 
 def bootstrapExpDecay(data, nIterations):
     d1 = data.index[-1]
@@ -354,8 +356,7 @@ def backtestthread(trainingData, realData, start, end, memory, model):
     return backtestRapport
 
 
-def backtest(trainingData,realData, start, end, memory, model):
-
+def backtest(trainingData, realData, start, end, memory, model):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
     timerStart = time.time()
 
@@ -369,7 +370,7 @@ def backtest(trainingData,realData, start, end, memory, model):
         dateMemory = date - datetime.timedelta(days=memory)
         modelSim1p, modelSim5p, modelSimES1, modelSimES5, returnSeries = model(trainingData[dateMemory:date])
         results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
-        results.to_csv('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv")
+        results.to_csv('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv")
 
     duration = (time.time() - timerStart) / len(results.index)
 
@@ -394,10 +395,10 @@ def backtest(trainingData,realData, start, end, memory, model):
 
 if __name__ == "__main__":
     try:
-        df = pd.read_csv('TData9313_final5.csv', sep=",", index_col=0)
+        df = pd.read_csv('data/TData9313_final5.csv', sep=",", index_col=0)
         print "data loaded", time.time() - t0
         df.index = pd.to_datetime(df.index)
-        daily = df.resample('d',how='last').dropna(how='all')
+        daily = df.resample('d', how='last').dropna(how='all')
         df = np.log(df).diff().dropna(how='all')
         daily = np.log(daily).diff().dropna(how='all')
 
@@ -408,9 +409,13 @@ if __name__ == "__main__":
         for a, b in zip(backtest_output.index, backtest_output.values):
             file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
         file.close()
-        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'holden750@gmail.com', 'Ireren er færdig')
-        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'thorup.dk@gmail.com', 'Ireren er færdig')
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
+                    'Ireren er færdig')
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
+                    'Ireren er færdig')
 
     except:
-        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'holden750@gmail.com', 'Ireren har fejlet')
-        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'thorup.dk@gmail.com', 'Ireren har fejlet')
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
+                    'Ireren har fejlet')
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
+                    'Ireren har fejlet')

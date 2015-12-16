@@ -172,10 +172,15 @@ def DescriptiveStatsandStylizedFacts():
     def VolCluster():
         ##### Volatility Clustering
 
+        fig1 = plt.figure(num=None, figsize=(7.3, 5), dpi=300, facecolor='0.95')
+        ax1 = fig1.add_subplot(1, 1, 1)
+
         r = (np.sum(df,axis=1)/len(df.columns))**2
-        plt.plot_date(r.index,r,fmt='-',label='Squared Returns')
+        ax1.plot_date(r.index,r,fmt='-',label='Squared Returns', color=c[0])
+        ax1.text(0.001, 0.001, "Squared returns", color=c[0], size=8, family='Segoe UI')
         plt.legend(loc='best')
-        plt.savefig('Graphs/VolClustering.pdf',bbox_inches='tight')
+        plt.show()
+        #plt.savefig('Graphs/VolClustering.pdf',bbox_inches='tight')
     def SlowDecay():
         r = abs(np.sum(df.replace(np.inf,np.nan).replace(-np.inf,np.nan).fillna(0),axis=1)/len(df.columns))
         r = abs(df['AAPL'].replace(np.inf,np.nan).replace(-np.inf,np.nan).dropna(0))[:1000000]
@@ -193,10 +198,23 @@ def DescriptiveStatsandStylizedFacts():
     df.index = pd.to_datetime(df.index)
     df = np.log(df).diff()
     #DescStat()
-    SlowDecay()
+    #SlowDecay()
+    VolCluster()
 
 
 
 
 if __name__  == "__main__":
+    c = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
+
+    seaborn.set(context='paper', rc={
+        'axes.facecolor': '#F0F0F0',
+        'figure.facecolor': '#F0F0F0',
+        'savefig.facecolor': '#F0F0F0',
+        'figure.dpi': 300,
+        'savefig.dpi': 300,
+        'grid.color': '#DADADA',
+        'ytick.color': '#66666A',
+        'xtick.color': '#66666A'
+    })
     DescriptiveStatsandStylizedFacts()
