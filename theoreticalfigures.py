@@ -178,7 +178,7 @@ def DescriptiveStatsandStylizedFacts():
         plt.savefig('Graphs/VolClustering.pdf',bbox_inches='tight')
     def SlowDecay():
         r = abs(np.sum(df.replace(np.inf,np.nan).replace(-np.inf,np.nan).fillna(0),axis=1)/len(df.columns))
-        r = abs(df['AAPL'].replace(np.inf,np.nan).replace(-np.inf,np.nan).dropna(0))
+        r = abs(df['AAPL'].replace(np.inf,np.nan).replace(-np.inf,np.nan).dropna(0))[:100]
         r1 = (np.sum(df.replace(np.inf,np.nan).replace(-np.inf,np.nan).fillna(0),axis=1)/len(df.columns))
         r1 = (df['AAPL'].replace(np.inf,np.nan).replace(-np.inf,np.nan).dropna(0))
         acf1,conf = acf(pd.DataFrame(r),alpha=0.05,nlags=20)
