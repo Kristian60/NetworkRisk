@@ -22,6 +22,7 @@ if hasattr(sys, 'getwindowsversion'):
 
 else:
     it = 10000
+    import mailer
 t0 = time.time()
 
 pd.set_option('notebook_repr_html', True)
@@ -392,17 +393,24 @@ def backtest(trainingData,realData, start, end, memory, model):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv('TData9313_final5.csv', sep=",", index_col=0)
-    print "data loaded", time.time() - t0
-    df.index = pd.to_datetime(df.index)
-    daily = df.resample('d',how='last').dropna(how='all')
-    df = np.log(df).diff().dropna(how='all')
-    daily = np.log(daily).diff().dropna(how='all')
+    try:
+        df = pd.read_csv('TData9313_final5.csv', sep=",", index_col=0)
+        print "data loaded", time.time() - t0
+        df.index = pd.to_datetime(df.index)
+        daily = df.resample('d',how='last').dropna(how='all')
+        df = np.log(df).diff().dropna(how='all')
+        daily = np.log(daily).diff().dropna(how='all')
 
-    backtest_output = backtest(trainingData=df, realData=daily, start='19940301', end='20150101', memory=50,
-                               model=estimateAndBootstrap)
+        backtest_output = backtest(trainingData=df, realData=daily, start='19940301', end='20150101', memory=50,
+                                   model=estimateAndBootstrap)
 
-    file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
-    for a, b in zip(backtest_output.index, backtest_output.values):
-        file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
-    file.close()
+        file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
+        for a, b in zip(backtest_output.index, backtest_output.values):
+            file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
+        file.close()
+        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'holden750@gmail.com', 'Ireren er færdig')
+        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'thorup.dk@gmail.com', 'Ireren er færdig')
+
+    except:
+        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'holden750@gmail.com', 'Ireren har fejlet')
+        mailer.send('dailyResults_'+ time.strftime("%Y%m%d", time.gmtime()) + ".csv",'thorup.dk@gmail.com', 'Ireren har fejlet')
