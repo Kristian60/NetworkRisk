@@ -53,13 +53,10 @@ def SortFiles():
     Sort the content of the files and align structure of data frame
     :return:
     '''
-    for ff in os.listdir('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taqclean/'):
-        #ff = 'data/taq/19930104.csv'
+    for ff in os.listdir('G:/Speciale Data/taqclean/'):
         print ff
         ddate = pd.to_datetime(ff.split('.')[0])
-        #if ddate.year == 1994:
-        #print ff
-        df = pd.read_csv('C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/data/taqclean/' + ff)
+        df = pd.read_csv('G:/Speciale Data/taqclean/' + ff)
         temp = pd.DataFrame(index=[datetime.datetime(1970,1,1,9,30)+datetime.timedelta(0,0,0,0,j) for j in range(391)])
         temp.index.name = 'time'
         for j in np.unique(df['sym']):
@@ -70,23 +67,29 @@ def SortFiles():
             temp = pd.merge(temp.reset_index(drop=False),t.reset_index(drop=False),'left',on='time').ffill().bfill().set_index('time')
 
         temp.index = [str(j).replace('1970-01-01',str(ddate).split(' ')[0]) for j in temp.index]
-        temp.to_csv('data/taqagg/' + ff.split('/')[-1])
+        temp.to_csv('G:/Speciale Data/taqagg/' + ff.split('/')[-1])
 
 def AggFiles():
     '''
 
-    Aggregate all the files into one single file
+    Aggregate all the files into one single file.
 
     :return:
     '''
-    df = pd.DataFrame()
-    for ff in os.listdir('D:/Speciale Data/taqclean/taqagg/'):
+
+    symlist = 'AAPL AXP BA CAT CSCO CVX DD DIS GE GS HD IBM INTC JNJ JOM KO MCD MMM MRK MSFT NKE PFE PG TRV UNH UTX V VZ WMT XOM'.split(' ')
+    for nr,ff in enumerate(os.listdir('G:/Speciale Data/taqagg/')):
         print ff
-        temp = pd.read_csv('D:/Speciale Data/taqclean/taqagg/' + ff)
+        df = pd.DataFrame(columns=symlist)
+        temp = pd.read_csv('G:/Speciale Data/taqagg/' + ff)
         df = df.append(temp)
-    df.rename(columns={'Unnamed: 0':'time'},inplace=True)
-    df = df.set_index('time')
-    df.to_csv('data/taq93-99.csv')
+        df.rename(columns={'Unnamed: 0':'time'},inplace=True)
+        df = df.set_index('time')
+        if nr == 0:
+            df.to_csv('data/TData93-2013.csv')
+        else:
+            df.to_csv('data/TData93-2013.csv',mode='a',header=False)
+            #exit()
 
 def BGallo():
     def BG_algo(nbrhd,d, y, obs):
@@ -138,4 +141,5 @@ def BGallo():
 
 
 if __name__ == "__main__":
-    BGallo()
+    #SortFiles()
+    AggFiles()
