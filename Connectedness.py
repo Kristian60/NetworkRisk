@@ -15,8 +15,9 @@ from functools import partial
 import multiprocessing as mp
 from scipy.stats import expon
 
+
 if hasattr(sys, 'getwindowsversion'):
-    it = 1000
+    it = 5
     import matplotlib.pyplot as plt
     import seaborn as sns
 
@@ -37,7 +38,7 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     :param H: integer, size of step ahead forecast
     :return: a dataframe of connectivity or concentration parameters
     """
-    data = data.dropna(axis=1, how='any')
+
 
     model = sm.VAR(data)
     results = model.fit(maxlags=H, ic='aic')
@@ -89,10 +90,12 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
     dailyReturns = []
 
     residNp = resid.values
+
     impulseResponseSystem = marep[::-1]  # Invert impulse responses to fit DataFrame
 
     simR = np.empty((periods, nAssets))
     simV = np.ones((periods + 1, nAssets))
+
     if decay:
         shockM = bootstrapExpDecay(resid, nIterations)
     else:
@@ -102,6 +105,7 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
         simReturns = simR.copy()
         simValues = simV.copy()
         shockMatrix = shockM[i]
+
 
         if dummy == True:
             pseudoReturn = np.product(np.sum(shockMatrix[15:] + 1, axis=1) / 11)
@@ -114,10 +118,11 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
 
             dailyReturns.append(simValues[-1, :].sum() / simValues.shape[1])
 
+
     return dailyReturns
 
-
 def bootstrapExpDecay(data, nIterations):
+
     d1 = data.index[-1]
     d1 = datetime.datetime(d1.year, d1.month, d1.day)
 
@@ -132,14 +137,13 @@ def bootstrapExpDecay(data, nIterations):
     utilizedLags = int(391 - minsPerDay[0])
     bootstrapLength = 391 + utilizedLags
 
-    data = np.insert(data.values, 0, np.empty_like(data.ix[:utilizedLags, :]), axis=0)
+    data = np.insert(data.values, 0, np.zeros_like(data.ix[:utilizedLags, :]), axis=0)
 
     data = data.reshape((len(data) / 391, 391, data.shape[1]))
     uninumbers = np.random.uniform(size=(bootstrapLength, nIterations))
 
     a = np.array([np.digitize(uninumbers[_], probDist) for _ in range(bootstrapLength)])
     b = np.array([[random.choice(data[-i, :, :]) for i in a[:, q]] for q in range(nIterations)])
-    return b
 
 
 def realizedDaily(day=False):
@@ -178,6 +182,8 @@ def zeroDeltaVar(data):
 def estimateAndBootstrap(df):
     H = 15
     sparse_method = False
+
+    df = df.dropna(axis=1, how='any')
     con, sigma, marep, resid = EstimateVAR(df, H, sparse_method=sparse_method)
     returnSeries = BootstrapMult(resid, marep, it)
     var1 = np.percentile(returnSeries, 1)
@@ -403,6 +409,7 @@ if __name__ == "__main__":
         daily = df.resample('d', how='last').dropna(how='all')
         df = np.log(df).diff().dropna(how='all')
         daily = np.log(daily).diff().dropna(how='all')
+
 
         backtest_output = backtest(trainingData=df, realData=daily, start='19930301', end='20150101', memory=50,
                                    model=estimateAndBootstrap)
