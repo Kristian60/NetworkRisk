@@ -145,6 +145,8 @@ def bootstrapExpDecay(data, nIterations):
     a = np.array([np.digitize(uninumbers[_], probDist) for _ in range(bootstrapLength)])
     b = np.array([[random.choice(data[-i, :, :]) for i in a[:, q]] for q in range(nIterations)])
 
+    return b
+
 
 def realizedDaily(day=False):
     df = pd.read_csv('data/dailyData_e.csv', sep=",", index_col=0)
