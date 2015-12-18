@@ -50,7 +50,6 @@ def FormalTests():
 def BGallo():
 
     np.random.seed(10)
-    matplotlib.rcParams['legend.fontsize'] = '18'
 
     def BG_algo(nbrhd, n, d, y, obs):
         nbrhd = nbrhd[nbrhd.index != n]
@@ -69,10 +68,10 @@ def BGallo():
     for i in df.index:
         if i == 0:
             df.loc[i,'OFR'] = 100
-        elif i == 100:
-            df.loc[i,'OFR'] = df.loc[i-1,'OFR'] + np.random.normal() + 10
+        elif i == 75:
+            df.loc[i,'OFR'] = df.loc[i-1,'OFR'] + np.random.normal() + 6
             #df.loc[i,'OFR'] = df.loc[i-1,'OFR'] + np.random.normal()
-        elif i == 101:
+        elif i == 76:
             df.loc[i,'OFR'] = df.loc[i-2,'OFR'] + np.random.normal()
         else:
             df.loc[i,'OFR'] = df.loc[i-1,'OFR'] + np.random.normal()
@@ -115,38 +114,43 @@ def BGallo():
     df['acc_max'] = df.Nbhd_mean+3*df.Nbhd_std+y
 
 
-    fig = plt.figure(num=1, figsize=(20, 10), facecolor='grey')
+    fig = plt.figure(num=1)
     ax = fig.add_axes([0.05, 0.05, 0.9, 0.9])
-    ax.plot(df.Nbhd_mean, c='b', alpha=0.5,label='Neighborhood Mean')
-    ax.xaxis.set_major_locator(plticker.MultipleLocator(base=50.0))
-    ax.fill_between(df.index, df.acc_min.values, df.acc_max.values, alpha=0.5)
-    ax.scatter(acc_set.index,acc_set.OFR, marker='o', c='black',label='Valid Observations',s=60)
-    ax.scatter(fail_set.index,fail_set.OFR, marker='o', c='r',label='Invalid Observations',s=60)
-    ax.set_yticklabels(range(95,145,5),[str(j) for j in range(95,145,5)],size = 20)
-    ax.set_xticklabels(range(-50,250,50),[str(j) for j in range(-50,250,50)],size = 20)
-    ax.set_xlim(0,len(df))
-
+    ax.plot(df.Nbhd_mean, alpha=0.4,label='Neighborhood Mean', color=c[1])
+    #ax.xaxis.set_major_locator(plticker.MultipleLocator(base=50.0))
+    ax.fill_between(df.index, df.acc_min.values, df.acc_max.values, alpha=0.2, color=c[2])
+    ax.scatter(acc_set.index,acc_set.OFR, marker='o', color='#000000', alpha=0.6,label='Valid Observations',s=5)
+    ax.scatter(fail_set.index,fail_set.OFR, marker='o', color=c[3],label='Invalid Observations',s=5)
+    #ax.set_yticklabels(range(95,145,5),[str(j) for j in range(95,145,5)],size = 2)
+    #ax.set_xticklabels(range(-50,250,50),[str(j) for j in range(-50,250,50)],size = 2)
+    ax.set_xlim(1,len(df)-5)
+    ax.set_ylim(96,129)
 
     plt.legend(loc=2)
-    plt.savefig('graphs/BrGalloAlgo.pdf',bbox_inches='tight')
-    plt.show()
+    plt.savefig('BrGalloAlgo.pdf')
+    #plt.show()
 
 def DecayBoot():
 
     days = 10
-    a = [expon.pdf(j/1000+1,scale=1.5)+.02 for j in np.arange(0,390*days,1)]
+    a = [expon.pdf(j/1000+1,scale=1.5)+.03 for j in np.arange(0,390*days,1)]
     b = []
     for i in np.linspace(1,3,days):
         b.extend([expon.pdf(i) for _ in range(390)])
     fig,axs = plt.subplots(1,1)
-    axs.plot(b,label='Discrete Exponential Decay')
-    axs.plot(a,label='Strictly Exponential Decay')
+
+    plt.vlines(0,0,0.5,lw=0.5)
+    plt.hlines(0,-200,4000,lw=1)
+    axs.plot(b,label='Discrete Exponential Decay', color=c[1])
+    axs.plot(a,label='Strictly Exponential Decay', color=c[2])
     axs.set_yticklabels([''])
-    axs.set_ylabel('Relative Probability Of Selecting Observation In Bootstrap')
-    axs.set_xlabel('Minutes Since Observation')
+    axs.set_ylabel('Relative probability of selecting observation')
+    axs.set_xlabel('Minutes since observation')
     plt.legend(loc='best')
-    plt.savefig('Graphs/ExponDecay.pdf',bbox_inches='tight')
-    plt.show()
+    plt.xlim(-100,3900)
+    plt.ylim(0,0.422)
+    plt.savefig('ExponDecay.pdf')
+    #plt.show()
 
 def DescriptiveStatsandStylizedFacts():
     def DescStat():
@@ -157,30 +161,32 @@ def DescriptiveStatsandStylizedFacts():
         tdf.to_latex('DS.tex')
     def Htails():
         ##### Heavy Tails
-        r = np.array(df['AAPL'].replace(np.inf,np.nan).replace(-np.inf,np.nan)).ravel()
-        r = np.array([random.choice(r) for _ in range(1000000)])
-        r = r[(abs(r)>=0) & (abs(r)<=0.05)]
+        r = np.array(df['AAPL'][-200000:].replace(np.inf,np.nan).replace(-np.inf,np.nan)).ravel()
+        #r = np.array([random.choice(r) for _ in range(1000000)])
+        #r = r[(abs(r)>=0) & (abs(r)<=0.05)]
 
         bw = 0.002
-        seaborn.kdeplot(r,label='Return Data',bw=bw)
+        seaborn.distplot(r,bins=801*3,kde=False, label='Return Data',norm_hist=True,color=c[1])
         ndata = np.random.normal(np.mean(r),np.std(r),int(len(r)))
-        seaborn.kdeplot(ndata,label='Normally Distributed Data',bw=bw)
-        plt.xlim(-0.03,0.03)
-        plt.yticks([])
-        plt.savefig('Graphs/HeavyTails.pdf',bbox_inches='tight')
-        plt.show()
+        seaborn.kdeplot(ndata,label='Normal Distribution', linestyle="-",color=c[0])
+        plt.xlim(-0.0031,0.0031)
+        plt.ylim(-30,1120)
+        plt.yticks([0,200,400,600,800,1000],['','','','','',''])
+        plt.savefig('HeavyTails.pdf')
+#        plt.show()
     def VolCluster():
         ##### Volatility Clustering
 
-        fig1 = plt.figure(num=None, figsize=(7.3, 5), dpi=300, facecolor='0.95')
+        fig1 = plt.figure(num=None, figsize=(7, 4), dpi=300, facecolor='0.95')
         ax1 = fig1.add_subplot(1, 1, 1)
 
         r = (np.sum(df,axis=1)/len(df.columns))**2
-        ax1.plot_date(r.index,r,fmt='-',label='Squared Returns', color=c[0])
-        ax1.text(0.001, 0.001, "Squared returns", color=c[0], size=8, family='Segoe UI')
+        ax1.plot_date(r.index,r,fmt='-',label='Squared Returns', color=c[1])
+        ax1.set_ylim(-0.0001,0.0031)
         plt.legend(loc='best')
-        plt.show()
-        #plt.savefig('Graphs/VolClustering.pdf',bbox_inches='tight')
+        #plt.show()
+        plt.savefig('VolClustering.pdf')
+
     def SlowDecay():
         r = abs(np.sum(df.replace(np.inf,np.nan).replace(-np.inf,np.nan).fillna(0),axis=1)/len(df.columns))
         r = abs(df['AAPL'].replace(np.inf,np.nan).replace(-np.inf,np.nan).dropna(0))[:1000000]
@@ -199,15 +205,15 @@ def DescriptiveStatsandStylizedFacts():
     df = np.log(df).diff()
     #DescStat()
     #SlowDecay()
+    #VolCluster()
     VolCluster()
-
 
 
 
 if __name__  == "__main__":
     c = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
 
-    seaborn.set(context='paper', rc={
+    seaborn.set(context='paper', font='Segoe UI', rc={
         'axes.facecolor': '#F0F0F0',
         'figure.facecolor': '#F0F0F0',
         'savefig.facecolor': '#F0F0F0',
@@ -217,4 +223,5 @@ if __name__  == "__main__":
         'ytick.color': '#66666A',
         'xtick.color': '#66666A'
     })
+    #DecayBoot()
     DescriptiveStatsandStylizedFacts()

@@ -29,7 +29,7 @@ if __name__ == "__main__":
     #relevant = 'AAPL AXP BA CSCO CVX GS IBM MSFT PG V XOM'.split(' ')
 
     ndf = pd.read_csv('data/TData9313_final5.csv', sep=",", index_col=0, nrows=1)
-    df = pd.read_csv('data/TData9313_final5.csv', sep=",", index_col=0, skiprows=2000000, nrows=30000,
+    df = pd.read_csv('data/TData9313_final5.csv', sep=",", index_col=0, skiprows=1630000, nrows=30000,
                      names=ndf.columns)
     #df = df[relevant]
 
@@ -37,12 +37,14 @@ if __name__ == "__main__":
     daily = df.resample('d', how='last').dropna(how='all')
 
     df = np.log(df).diff().dropna(axis=1, how='all').dropna()
+    print df
+    exit()
+
+    _, _SIGMA, MA, _results = Connectedness.EstimateVAR(df, 15, GVD_output=True)
 
 
-    _, _SIGMA, MA, _results = Connectedness.EstimateVAR(df, 15)
-
-
-
+    print _
+    exit()
     f, ax = plt.subplots(df.shape[1], df.shape[1], figsize=(11,7.5))
 
     for n, x in enumerate(ax):
