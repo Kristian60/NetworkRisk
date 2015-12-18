@@ -11,8 +11,8 @@ from scipy.stats import expon
 import matplotlib
 from statsmodels.tsa.stattools import acf
 import random
-
-
+from matplotlib import gridspec
+import Connectedness
 
 pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
@@ -200,14 +200,47 @@ def DescriptiveStatsandStylizedFacts():
         plt.fill_between(range(len(acf1)),[i[0] for i in conf2],[i[1] for i in conf2],alpha=0.3)
         plt.legend(loc='best')
         plt.savefig('Graphs/PACFAbsReturns.pdf',bbox_inches='tight')
+
+    def tracesGraph(df):
+        GVD, SIGMA, _ma_rep, res = Connectedness.EstimateVAR(df,15)
+        traces = Connectedness.BootstrapMult(res,_ma_rep,2000,report_traces=True)
+
+        # generate some data
+        x = np.arange(0, 10, 0.2)
+        y = np.sin(x)
+
+        # plot it
+        fig = plt.figure(figsize=(7, 4))
+        gs = gridspec.GridSpec(1, 2, width_ratios=[4, 1])
+        ax0 = plt.subplot(gs[0])
+        ax0.plot(traces.T, color=c[1], alpha=0.1, lw=0.25, label='Traces of simulated returns')
+        ax1 = plt.subplot(gs[1])
+        final = traces.T[-1]
+
+        seaborn.distplot(final,ax=ax1,vertical=True,rug=True,kde=False,color=c[1],bins=200,rug_kws={'lw':0.1})
+
+        ax1.set_yticklabels([''])
+        ax1.set_xticklabels([''])
+
+        ax0.set_ylim(0.97,1.03)
+        ax0.set_xlim(-5,391)
+        ax1.set_ylim(0.97,1.03)
+
+        plt.tight_layout(pad=2, h_pad=0, w_pad=0)
+        plt.legend(loc='upper left')
+        plt.show()
+
+
     df = pd.read_csv('data/TData9313_final5.csv',index_col=0)
     df.index = pd.to_datetime(df.index)
-    df = np.log(df).diff()
+    df = df['19930301':'19930501']
+    df = np.log(df).diff()[1:]
+    df = df.dropna(axis=1,how='all')
+
     #DescStat()
     #SlowDecay()
     #VolCluster()
-    VolCluster()
-
+    tracesGraph(df)
 
 
 if __name__  == "__main__":

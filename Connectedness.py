@@ -69,7 +69,7 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     return pd.DataFrame(GVD), SIGMA, _ma_rep, results.resid
 
 
-def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
+def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True, report_traces=False):
     '''
 
     Ikke færdiggjort.
@@ -88,7 +88,7 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
     nAssets = len(marep[0])
 
     dailyReturns = []
-
+    dailyTraces = []
     residNp = resid.values
 
     impulseResponseSystem = marep[::-1]  # Invert impulse responses to fit DataFrame
@@ -116,8 +116,13 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True):
                                      range(responseLength)])
                 simValues[t + 1] *= simValues[t] * (simReturns[t] + 1)
 
+            if report_traces:
+                dailyTraces.append(simValues.sum(axis=1)/17)
+
             dailyReturns.append(simValues[-1, :].sum() / simValues.shape[1])
 
+    if report_traces:
+        return np.array(dailyTraces)
 
     return dailyReturns
 
@@ -138,7 +143,7 @@ def bootstrapExpDecay(data, nIterations):
     bootstrapLength = 391 + utilizedLags
 
     data = np.insert(data.values, 0, np.zeros_like(data.ix[:utilizedLags, :]), axis=0)
-
+    print data.shape
     data = data.reshape((len(data) / 391, 391, data.shape[1]))
     uninumbers = np.random.uniform(size=(bootstrapLength, nIterations))
 
