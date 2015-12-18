@@ -315,7 +315,7 @@ def formalTests(results, realData):
 
 
 def btestthread(start, end, memory, model, trainingData, results, date):
-    # print date
+
     f = open("log.txt", "w")
     f.write('start: ' + str(start) + '\n')
     f.write('end: ' + str(end) + '\n')
@@ -324,7 +324,7 @@ def btestthread(start, end, memory, model, trainingData, results, date):
     dateMemory = date - datetime.timedelta(days=memory)
     modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date])
     results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
-    # print time.time()-timerStart
+
     return [date, modelSim1p, modelSim5p, modelSimES1, modelSimES5]
 
 
