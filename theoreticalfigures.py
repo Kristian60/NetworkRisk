@@ -242,6 +242,14 @@ def DescriptiveStatsandStylizedFacts():
     #VolCluster()
     tracesGraph(df)
 
+def SOIplot():
+    df = pd.read_csv('SOI_fullresult.csv')
+    df.index = pd.to_datetime(df['Unnamed: 0'],format='%Y%m%d')
+    #df['SOI'] = pd.rolling_mean(df['SOI'],100,1)
+    plt.plot_date(df.index,df['SOI'],fmt='-')
+    plt.show()
+    print df
+
 
 if __name__  == "__main__":
     c = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]

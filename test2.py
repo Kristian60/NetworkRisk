@@ -106,6 +106,39 @@ def VarSimul(data,H):
     print np.std(test)
     seaborn.distplot(test,norm_hist=True)
     plt.show()
+
+
+def VarSimul2(data,H):
+    model = sm.VAR(data)
+    results = model.fit(H)
+    VARcoeff = results.params[1:]
+    VARcoeff = np.array(VARcoeff).reshape(len(VARcoeff)/len(data.columns),len(data.columns),len(data.columns))
+    VARstd = results.stderr[1:]
+    VARstd = np.array(VARstd).reshape(len(VARstd)/len(data.columns),len(data.columns),len(data.columns))
+    test = []
+
+    for i in range(10000):
+        VarSim = np.zeros((len(VARcoeff)/len(data.columns),len(data.columns),len(data.columns)))
+        for j in range(VarSim.shape[0]):
+            for k in range(VarSim.shape[1]):
+                for l in range(VarSim.shape[2]):
+                    VarSim[j][k,l] = np.random.normal(VARcoeff[j][k,l],VARstd[j][k,l])
+        marep = ma_rep(VarSim,15)
+        tlist = [marep[j][9,0] for j in range(marep.shape[0])]
+
+        test.append(tlist)
+
+    mean = [np.mean([j[i] for j in test]) for i in range(len(test[0]))]
+    up = [np.percentile([j[i] for j in test],97.5) for i in range(len(test[0]))]
+    down = [np.percentile([j[i] for j in test],2.5) for i in range(len(test[0]))]
+    plt.plot(mean,color=seaborn.xkcd_rgb['cornflower blue'],alpha=1,linestyle='-')
+    plt.plot(up,color=seaborn.xkcd_rgb['indian red'],alpha=0.5,linestyle='--')
+    plt.plot(down,color=seaborn.xkcd_rgb['indian red'],alpha=0.5,linestyle='--')
+    plt.fill_between(range(len(mean)),up,down,alpha=0.5)
+    plt.xlim(1)
+    plt.show()
+
+
 def MetropolisHastingMCMC(data,H):
     model = sm.VAR(data)
     results = model.fit(H)
@@ -198,25 +231,6 @@ def WildBootstrap(data,H):
         axs[i].set_title(method)
     plt.tight_layout()
     plt.show()
-def SOI(data,H):
-    ddate = datetime.datetime(2013,3,1)
-    soidf = pd.DataFrame()
-    while ddate<datetime.datetime(2015,7,1):
-        datestr2 = ddate.strftime('%Y%m%d')
-        datestr1 = (ddate-datetime.timedelta(50)).strftime('%Y%m%d')
-        print datestr1,datestr2, "        ",
-        td = data[datestr1:datestr2]
-        gvd,sigma,marep, resid = EstimateVAR(td,H,False,True)
-        soi = (len(gvd)-np.trace(np.array(gvd)))/len(gvd)
-        print soi
-        soidf.loc[td.index[-1].strftime("%Y%m%d"),'SOI'] = soi
-        ddate += datetime.timedelta(1)
-        soidf.to_csv('SOI.csv')
-    plt.plot_date(soidf.index,soidf['SOI'],fmt='-')
-    plt.title('Total Spillover Index')
-    plt.xlabel('Date')
-    plt.ylabel('SOI')
-    plt.show()
 
 def VineCopula(dat):
     cp_dat = dat.rank() / ( len(dat) + 1 )
@@ -250,11 +264,6 @@ def VineCopula(dat):
     ## testing
 
     rv.test()
-
-
-
-
-
 def ExponBoot2(data):
     d1 = datetime.datetime(2013,03,1)
 
@@ -291,10 +300,14 @@ def ExponBoot2(data):
 
 
 if __name__ == "__main__":
-    data = pd.read_csv('data/minutedata4.csv',index_col=0)
+
+    SOI()
+    exit()
+
+    #data = pd.read_csv('data/minutedata4.csv',index_col=0)
+    data = pd.read_csv('data/TData9313_final5.csv',index_col=0)
     data.index = pd.to_datetime(data.index)
-    data = np.log(data).diff().dropna()
-    ExponBoot(data)
+    data = np.log(data).diff()
     #SOI(data,15)
 
 

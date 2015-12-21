@@ -20,7 +20,7 @@ pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
 
-def StockMarket():
+def StockMarketOLD():
     ###############################################################################
     # Retrieve the data from Internet
 
@@ -177,8 +177,9 @@ def StockMarket():
     # is more efficient for structure recovery
 
 
-
+    df = pd.read_csv('data/TData9313_final5.csv',index_col=0)
     X = variation.copy()
+
     pd.DataFrame(np.round(np.cov(X.T),3),columns=symbols,index=symbols).to_latex('covariancetable.tex')
 
     print np.max(np.round(np.cov(X.T),3))
@@ -295,14 +296,65 @@ def StockMarket():
     plt.savefig('Graphs/StockCluster.svg',bbox_inches='tight')
     plt.show()
 
+
+def StockMarket():
+
+    X = pd.read_csv('data/TData9313_final5.csv',index_col=0)
+    X.index = pd.to_datetime(X.index)
+    X = X['20080101':'20091231']
+    X = X.resample('B',how='last').ffill().dropna(axis=0,how='all').dropna(axis=1)
+    #X = X.dropna(axis=1)
+    X = np.log(X).diff()[1:]
+    pd.DataFrame(np.round(np.cov(X.T),5),columns=X.columns,index=X.columns).to_latex('covariancetable.tex')
+
+    print pd.DataFrame(np.round(np.cov(X.T),5),columns=X.columns,index=X.columns).max()
+    print pd.DataFrame(np.round(np.cov(X.T),5),columns=X.columns,index=X.columns)
+    print pd.DataFrame(np.round(np.cov(X.T),5),columns=X.columns,index=X.columns).idxmax()
+
+
+    X /= X.std(axis=0)
+
+    covariance_,precision_ = graphical_lasso(X,0.6)
+    print pd.DataFrame(precision_)
+
+    gephi = pd.DataFrame()
+    nodes = pd.DataFrame()
+    nr = 0
+    artdf = pd.DataFrame(precision_,columns=X.columns,index=X.columns)
+    artdf2 = pd.DataFrame(covariance_,columns=X.columns,index=X.columns)
+    print "Create Gephi Files"
+    for nr1,i in enumerate(artdf.index):
+        for nr2,j in enumerate(artdf.columns):
+            if nr1 > nr2:
+                if abs(artdf.loc[i,j]) > 0:
+                    gephi.loc[nr,'Source'] = nr1+1
+                    gephi.loc[nr,'Target'] = nr2+1
+                    gephi.loc[nr,'Type'] = 'Undirected'
+                    gephi.loc[nr,'Id'] = nr+1
+                    gephi.loc[nr,'Label'] = nr1+1
+                    gephi.loc[nr,'Weight'] = abs(artdf.loc[i,j])
+                    gephi.loc[nr,'Weight'] = abs(artdf2.loc[i,j])
+                    gephi.loc[nr,'name'] = str(i)
+                    gephi.loc[nr,'toname'] = str(j)
+                    nr += 1
+        nodes.loc[nr1,'Nodes'] = nr1+1
+        nodes.loc[nr1,'Id'] = nr1+1
+        nodes.loc[nr1,'Label'] = str(i).split('feat')[0]
+
+
+
+    gephi.to_csv('gephi.csv')
+    nodes.to_csv('nodes.csv')
+
+
 def OilPrice():
-    dformat = DateFormatter('%Y')
+    dfomat = DateFormatter('%Y')
     years = YearLocator()   # every year
-    df = Quandl.get("ODA/POILBRE_USD")['20050101':'20100101']
+    df = Quandl.get("ODA/POILBRE_USD")['20080101':'20091231']
     fig,ax = plt.subplots()
     ax.plot_date(df.index,df['Value'],fmt='-',color=seaborn.xkcd_rgb['black'])
-    ax.xaxis.set_major_locator(years)
-    ax.xaxis.set_major_formatter(dformat)
+    #ax.xaxis.set_major_locator(years)
+    #ax.xaxis.set_major_formatter(dformat)
     plt.ylim(0,150)
     plt.ylabel('US Dollar per Barrel of Crude Oil')
     plt.savefig('Graphs/CrudeOil.pdf',bbox_inches='tight')
@@ -312,4 +364,16 @@ def OilPrice():
 
 if __name__ == "__main__":
 
-    StockMarket()
+    seaborn.set(context='paper', rc={
+        'axes.facecolor': '#F0F0F0',
+        'figure.facecolor': '#F0F0F0',
+        'savefig.facecolor': '#F0F0F0',
+        'figure.dpi': 300,
+        'savefig.dpi': 300,
+        'grid.color': '#DADADA',
+        'ytick.color': '#66666A',
+        'xtick.color': '#66666A'
+    })
+
+
+    OilPrice()
