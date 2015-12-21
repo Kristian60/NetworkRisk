@@ -8,9 +8,10 @@ import pandas as pd
 import matplotlib.ticker as plticker
 from scipy import stats
 from scipy.stats import expon
-import matplotlib
 from statsmodels.tsa.stattools import acf
 import random
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 from matplotlib import gridspec
 import Connectedness
 
@@ -211,25 +212,38 @@ def DescriptiveStatsandStylizedFacts():
 
         # plot it
         fig = plt.figure(figsize=(7, 4))
+
         gs = gridspec.GridSpec(1, 2, width_ratios=[4, 1])
         ax0 = plt.subplot(gs[0])
-        ax0.plot(traces.T, color=c[1], alpha=0.1, lw=0.25, label='Traces of simulated returns')
+        ax0.plot(traces.T, color=c[1], alpha=0.1, lw=0.25)
+
         ax1 = plt.subplot(gs[1])
         final = traces.T[-1]
 
         seaborn.distplot(final,ax=ax1,vertical=True,rug=True,kde=False,color=c[1],bins=200,rug_kws={'lw':0.1})
 
         ax1.set_yticklabels([''])
+        print ax0.get_yticklabels()
+        ax0.set_yticklabels(['-5%','-3%','-2%','-1%','0%','1%','2%','3%','3%'])
+        ax0.set_xticks([0,30,60,90,120,150,180,210,240,270,300,330,360,390])
+        ax0.set_xticklabels(['09:30','','','','11:30','','','','13:30','','','','15:30',''])
         ax1.set_xticklabels([''])
 
-        ax0.set_ylim(0.97,1.03)
-        ax0.set_xlim(-5,391)
-        ax1.set_ylim(0.97,1.03)
+        ax0.vlines(0,-200,4000,lw=0.5)
+        ax1.vlines(0,-200,4000,lw=0.5)
+        ax0.hlines(1,-200,4000,lw=0.5)
+        ax0.set_ylim(0.969,1.031)
+        ax0.set_xlim(-5,390)
+        ax0.set_title('Simulated returns')
+        ax1.set_ylim(0.969,1.031)
+        ax1.set_xlim(0,37)
+
+        ax0.set_ylabel('Return')
+
 
         plt.tight_layout(pad=2, h_pad=0, w_pad=0)
-        plt.legend(loc='upper left')
-        plt.show()
-
+        #plt.show()
+        plt.savefig('traces.pdf')
 
     df = pd.read_csv('data/TData9313_final5.csv',index_col=0)
     df.index = pd.to_datetime(df.index)
