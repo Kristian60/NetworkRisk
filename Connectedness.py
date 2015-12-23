@@ -410,7 +410,7 @@ def backtest(trainingData, realData, start, end, memory, model):
 
 if __name__ == "__main__":
     try:
-        df = pd.read_csv('data/TData9313_final5.csv', sep=",", index_col=0)
+        df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
         print "data loaded", time.time() - t0
         df.index = pd.to_datetime(df.index)
         daily = df.resample('d', how='last').dropna(how='all')
@@ -418,7 +418,7 @@ if __name__ == "__main__":
         daily = np.log(daily).diff().dropna(how='all')
 
 
-        backtest_output = backtest(trainingData=df, realData=daily, start='19930301', end='20150101', memory=50,
+        backtest_output = backtest(trainingData=df, realData=daily, start='20020401', end='20150101', memory=50,
                                    model=estimateAndBootstrap)
 
         file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
