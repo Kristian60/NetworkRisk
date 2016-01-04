@@ -353,7 +353,7 @@ def benchmarkModel(data, bootstrapPoolDays=500):
         output = np.append(output,[day,var1,var5,es1,es5,1+real_return[activeAssets].mean()])
 
 
-    out_df = pd.DataFrame(output.reshape((len(output)/5,5)),columns=['Date','Var1','Var5','ES1','ES5'])
+    out_df = pd.DataFrame(output.reshape((len(output)/6,6)),columns=['Date','Var1','Var5','ES1','ES5','Real Values'])
     out_df.to_csv('benchmark_model.csv')
 
     return
@@ -449,29 +449,29 @@ def backtest(trainingData, realData, start, end, memory, model):
 
 
 if __name__ == "__main__":
-    try:
+#    try:
     df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
     print "data loaded", time.time() - t0
     df.index = pd.to_datetime(df.index)
     daily = df.resample('d', how='last').dropna(how='all')
     #df = np.log(df).diff().dropna(how='all')
     daily = np.log(daily).diff().dropna(how='all')
+    benchmarkModel(daily)
+    exit()
+    backtest_output = backtest(trainingData=df, realData=daily, start='19930301', end='20150101', memory=50,
+                               model=estimateAndBootstrap)
 
+    file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
+    for a, b in zip(backtest_output.index, backtest_output.values):
+        file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
+    file.close()
+    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
+                'Ireren er færdig')
+    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
+                'Ireren er færdig')
 
-        backtest_output = backtest(trainingData=df, realData=daily, start='19930301', end='20150101', memory=50,
-                                   model=estimateAndBootstrap)
-
-        file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
-        for a, b in zip(backtest_output.index, backtest_output.values):
-            file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
-        file.close()
-        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
-                    'Ireren er færdig')
-        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
-                    'Ireren er færdig')
-
-    except:
-        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
-                    'Ireren har fejlet')
-        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
-                    'Ireren har fejlet')
+#    except:
+#        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
+#                    'Ireren har fejlet')
+#        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
+#                    'Ireren har fejlet')
