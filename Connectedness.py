@@ -453,9 +453,9 @@ if __name__ == "__main__":
         print "data loaded", time.time() - t0
         df.index = pd.to_datetime(df.index)
         daily = df.resample('d', how='last').dropna(how='all')
-        #df = np.log(df).diff().dropna(how='all')
-        daily = np.log(daily).diff().dropna(how='all')
-        benchmarkModel(daily)
+        df = np.log(df).diff().dropna(how='all')
+        #daily = np.log(daily).diff().dropna(how='all')
+        #benchmarkModel(daily)
         backtest_output = backtest(trainingData=df, realData=daily, start='19941227', end='20150101', memory=100,
                                model=estimateAndBootstrap)
 
