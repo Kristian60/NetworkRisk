@@ -243,8 +243,8 @@ def DescriptiveStatsandStylizedFacts():
 
 
         plt.tight_layout(pad=2, h_pad=0, w_pad=0)
-        #plt.show()
-        plt.savefig('traces.pdf')
+        plt.show()
+        #plt.savefig('traces.pdf')
 
     df = pd.read_csv('data/TData9313_final5.csv',index_col=0)
     df.index = pd.to_datetime(df.index)

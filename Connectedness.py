@@ -319,6 +319,46 @@ def formalTests(results, realData):
             christoffersenIFT(data['e5'], 0.05, t)]
 
 
+def benchmarkModel(data, bootstrapPoolDays=500):
+
+    firstDay = data.index[bootstrapPoolDays]
+    relevantDaysSet = data[firstDay:]
+
+    out_df = pd.DataFrame()
+    output = np.array([])
+    for day in relevantDaysSet.index:
+
+        real_return = data.loc[day]
+
+        bootstrapPool = data[:day]
+        activeAssets = bootstrapPool[-50:].dropna(axis=1).columns.values
+        bootstrapPool = bootstrapPool[-500:]
+
+        bootstrapPool = bootstrapPool[activeAssets]
+
+        assetCount = bootstrapPool.count(axis=1)
+
+        if len(assetCount.unique()) == 1:
+            equalWeightedPortfolioReturn = 1+(bootstrapPool.mean(axis=1))
+        else:
+            equalWeightedPortfolioReturn = 1+(bootstrapPool.sum(axis=1)/assetCount)
+
+        draw = [random.choice(equalWeightedPortfolioReturn.values) for x in range(10000)]
+
+        var1 = np.percentile(draw, 1)
+        var5 = np.percentile(draw, 5)
+        es1 = np.mean(np.extract(draw < var1, draw))
+        es5 = np.mean(np.extract(draw < var5, draw))
+
+        output = np.append(output,[day,var1,var5,es1,es5,1+real_return[activeAssets].mean()])
+
+
+    out_df = pd.DataFrame(output.reshape((len(output)/5,5)),columns=['Date','Var1','Var5','ES1','ES5'])
+    out_df.to_csv('benchmark_model.csv')
+
+    return
+
+
 def btestthread(start, end, memory, model, trainingData, results, date):
 
     f = open("log.txt", "w")
@@ -410,14 +450,15 @@ def backtest(trainingData, realData, start, end, memory, model):
 
 if __name__ == "__main__":
     try:
-        df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
-        print "data loaded", time.time() - t0
-        df.index = pd.to_datetime(df.index)
-        daily = df.resample('d', how='last').dropna(how='all')
-        df = np.log(df).diff().dropna(how='all')
-        daily = np.log(daily).diff().dropna(how='all')
+    df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
+    print "data loaded", time.time() - t0
+    df.index = pd.to_datetime(df.index)
+    daily = df.resample('d', how='last').dropna(how='all')
+    #df = np.log(df).diff().dropna(how='all')
+    daily = np.log(daily).diff().dropna(how='all')
 
-        backtest_output = backtest(trainingData=df, realData=daily, start='19930501', end='20150101', memory=100,
+
+        backtest_output = backtest(trainingData=df, realData=daily, start='19930301', end='20150101', memory=50,
                                    model=estimateAndBootstrap)
 
         file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
