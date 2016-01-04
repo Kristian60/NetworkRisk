@@ -14,6 +14,7 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 from matplotlib import gridspec
 import Connectedness
+import datetime
 
 pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
@@ -256,13 +257,29 @@ def DescriptiveStatsandStylizedFacts():
     #VolCluster()
     tracesGraph(df)
 
-def SOIplot():
-    df = pd.read_csv('SOI_fullresult.csv')
-    df.index = pd.to_datetime(df['Unnamed: 0'],format='%Y%m%d')
-    #df['SOI'] = pd.rolling_mean(df['SOI'],100,1)
-    plt.plot_date(df.index,df['SOI'],fmt='-')
+
+def SOIovertime():
+    df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/results/SOI_50_days.csv",index_col=0)
+    df['RollMean100'] = pd.rolling_mean(df['SOI'],100,min_periods=1)
+    df.index = pd.to_datetime(df.index,format='%Y%m%d')
+    plt.plot_date(df.index,df['SOI'],fmt='-',label='Spillover Index')
+    plt.plot_date(df.index,df['RollMean100'],fmt='-',color=seaborn.xkcd_rgb['indian red'], label='100 day Rolling Mean of Spillover Index')
+    plt.legend(loc='best')
     plt.show()
     print df
+
+
+def LLovertime():
+    df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/results/SOI_50_days.csv",index_col=0)
+    df.index = pd.to_datetime(df.index,format='%Y%m%d')
+    plt.plot_date(df.index,df['LL'],fmt='-',label='Lag Length')
+    plt.legend(loc='best')
+    plt.ylim(0,15.2)
+    plt.xlim(datetime.datetime(1993,1,1),datetime.datetime(2014,5,1))
+    plt.title('Lag Length by AIC')
+    plt.savefig('Graphs/LLOvertime.pdf',bbox_inches='tight')
+    plt.show()
+
 
 
 if __name__  == "__main__":
@@ -279,4 +296,4 @@ if __name__  == "__main__":
         'xtick.color': '#66666A'
     })
     #DecayBoot()
-    DescriptiveStatsandStylizedFacts()
+    LLovertime()
