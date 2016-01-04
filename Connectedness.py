@@ -131,7 +131,7 @@ def bootstrapExpDecay(data, nIterations):
     d1 = data.index[-1]
     d1 = datetime.datetime(d1.year, d1.month, d1.day)
 
-    shapeval = 10
+    shapeval = 100
     daysSince = [(d1 - j).days + 1 for j in data.index]
 
     probDist = [1 - expon.cdf(j, scale=shapeval) for j in np.unique(daysSince)]
@@ -143,7 +143,6 @@ def bootstrapExpDecay(data, nIterations):
     bootstrapLength = 391 + utilizedLags
 
     data = np.insert(data.values, 0, np.zeros_like(data.ix[:utilizedLags, :]), axis=0)
-    print data.shape
     data = data.reshape((len(data) / 391, 391, data.shape[1]))
     uninumbers = np.random.uniform(size=(bootstrapLength, nIterations))
 
@@ -187,7 +186,7 @@ def zeroDeltaVar(data):
 
 
 def estimateAndBootstrap(df):
-    H = 15
+    H = 30
     sparse_method = False
 
     df = df.dropna(axis=1, how='any')
@@ -449,29 +448,28 @@ def backtest(trainingData, realData, start, end, memory, model):
 
 
 if __name__ == "__main__":
-#    try:
-    df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
-    print "data loaded", time.time() - t0
-    df.index = pd.to_datetime(df.index)
-    daily = df.resample('d', how='last').dropna(how='all')
-    #df = np.log(df).diff().dropna(how='all')
-    daily = np.log(daily).diff().dropna(how='all')
-    benchmarkModel(daily)
-    exit()
-    backtest_output = backtest(trainingData=df, realData=daily, start='19930301', end='20150101', memory=50,
+    try:
+        df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
+        print "data loaded", time.time() - t0
+        df.index = pd.to_datetime(df.index)
+        daily = df.resample('d', how='last').dropna(how='all')
+        #df = np.log(df).diff().dropna(how='all')
+        daily = np.log(daily).diff().dropna(how='all')
+        benchmarkModel(daily)
+        backtest_output = backtest(trainingData=df, realData=daily, start='19941227', end='20150101', memory=100,
                                model=estimateAndBootstrap)
 
-    file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
-    for a, b in zip(backtest_output.index, backtest_output.values):
-        file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
-    file.close()
-    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
-                'Ireren er færdig')
-    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
-                'Ireren er færdig')
+        file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
+        for a, b in zip(backtest_output.index, backtest_output.values):
+            file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
+        file.close()
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
+                    'Ireren er færdig')
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
+                    'Ireren er færdig')
 
-#    except:
-#        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
-#                    'Ireren har fejlet')
-#        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
-#                    'Ireren har fejlet')
+    except:
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
+                    'Ireren har fejlet')
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
+                    'Ireren har fejlet')

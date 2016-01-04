@@ -276,6 +276,13 @@ def SOIovertime():
 def LLovertime():
     df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/results/SOI_50_days.csv", index_col=0)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')
+
+    t = df[df['LL']==15]
+    for i in t.index:
+        print i
+    exit()
+
+
     plt.plot_date(df.index, df['LL'], fmt='-', label='Lag Length')
     plt.legend(loc='best')
     plt.ylim(0, 15.2)
