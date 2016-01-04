@@ -418,7 +418,7 @@ if __name__ == "__main__":
         daily = np.log(daily).diff().dropna(how='all')
 
 
-        backtest_output = backtest(trainingData=df, realData=daily, start='19930401', end='20150101', memory=100,
+        backtest_output = backtest(trainingData=df, realData=daily, start='19930501', end='20150101', memory=100,
                                    model=estimateAndBootstrap)
 
         file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
