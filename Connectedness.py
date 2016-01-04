@@ -186,7 +186,7 @@ def zeroDeltaVar(data):
 
 
 def estimateAndBootstrap(df):
-    H = 30
+    H = 15
     sparse_method = False
 
     df = df.dropna(axis=1, how='any')
