@@ -269,8 +269,8 @@ def SOIovertime():
     plt.plot_date(df.index, df['RollMean100'], fmt='-', color=c[0],
                   label='100 day Rolling Mean of Spillover Index', linewidth=1, alpha=0.8)
     plt.legend(loc='best')
-    plt.hlines(0, datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1), alpha=0.6, lw=1)
-    plt.xlim(datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1))
+    plt.hlines(0, datetime.datetime(1994, 8, 1), datetime.datetime(2014, 5, 1), alpha=0.6, lw=1)
+    plt.xlim(datetime.datetime(1994, 8, 1), datetime.datetime(2014, 5, 1))
     plt.ylim(-0.05, 1.05)
     plt.savefig('Graphs/SOIOvertime.pdf', bbox_inches='tight')
     plt.show()
@@ -288,8 +288,8 @@ def LLovertime():
     ax = plt.gca()
     plt.ylim(-0.4, 16.4)
     ax.set_yticks([0, 2, 4, 6, 8, 10, 12, 14, 16])
-    plt.hlines(0, datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1), alpha=0.6, lw=1)
-    plt.xlim(datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1))
+    plt.hlines(0, datetime.datetime(1994, 8, 1), datetime.datetime(2014, 5, 1), alpha=0.6, lw=1)
+    plt.xlim(datetime.datetime(1994, 8, 1), datetime.datetime(2014, 5, 1))
 
     plt.title('Lag Length by AIC')
     plt.legend(loc='best')
