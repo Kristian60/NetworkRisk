@@ -265,10 +265,14 @@ def SOIovertime():
     df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/results/SOI_50_days.csv", index_col=0)
     df['RollMean100'] = pd.rolling_mean(df['SOI'], 100, min_periods=1)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')
-    plt.plot_date(df.index, df['SOI'], fmt='-', label='Spillover Index')
-    plt.plot_date(df.index, df['RollMean100'], fmt='-', color=seaborn.xkcd_rgb['indian red'],
-                  label='100 day Rolling Mean of Spillover Index')
+    plt.plot_date(df.index, df['SOI'], fmt='-', label='Spillover Index',color=c[1],lw=1,alpha=0.3)
+    plt.plot_date(df.index, df['RollMean100'], fmt='-', color=c[0],
+                  label='100 day Rolling Mean of Spillover Index',linewidth=1,alpha=0.8)
     plt.legend(loc='best')
+    plt.hlines(0,datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1),alpha=0.6,lw=1)
+    plt.xlim(datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1))
+    plt.ylim(-0.05,1.05)
+    plt.savefig('Graphs/SOIOvertime.pdf', bbox_inches='tight')
     plt.show()
     print df
 
@@ -276,18 +280,19 @@ def SOIovertime():
 def LLovertime():
     df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/results/SOI_50_days.csv", index_col=0)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')
+    df['RollMean100'] = pd.rolling_mean(df['LL'], 100, min_periods=1)
+    plt.plot_date(df.index, df['LL'],markersize=2,fmt='-', label='Lag Length',color = c[1],alpha=0.3)
+    plt.plot_date(df.index, df['RollMean100'], fmt='-', color=c[0],lw=1,alpha=0.8,
+                  label='100 day Rolling Mean of Lag Length')
 
-    t = df[df['LL']==15]
-    for i in t.index:
-        print i
-    exit()
-
-
-    plt.plot_date(df.index, df['LL'], fmt='-', label='Lag Length')
-    plt.legend(loc='best')
-    plt.ylim(0, 15.2)
+    ax = plt.gca()
+    plt.ylim(-0.4,16.4)
+    ax.set_yticks([0,2,4,6,8,10,12,14,16])
+    plt.hlines(0,datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1),alpha=0.6,lw=1)
     plt.xlim(datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1))
+
     plt.title('Lag Length by AIC')
+    plt.legend(loc='best')
     plt.savefig('Graphs/LLOvertime.pdf', bbox_inches='tight')
     plt.show()
 
@@ -306,4 +311,4 @@ if __name__ == "__main__":
         'xtick.color': '#66666A'
     })
     # DecayBoot()
-    LLovertime()
+    SOIovertime()
