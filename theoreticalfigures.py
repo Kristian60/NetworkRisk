@@ -265,13 +265,13 @@ def SOIovertime():
     df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/results/SOI_100_days.csv", index_col=0)
     df['RollMean100'] = pd.rolling_mean(df['SOI'], 100, min_periods=1)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')
-    plt.plot_date(df.index, df['SOI'], fmt='-', label='Spillover Index',color=c[1],lw=1,alpha=0.3)
+    plt.plot_date(df.index, df['SOI'], fmt='-', label='Spillover Index', color=c[1], lw=1, alpha=0.3)
     plt.plot_date(df.index, df['RollMean100'], fmt='-', color=c[0],
-                  label='100 day Rolling Mean of Spillover Index',linewidth=1,alpha=0.8)
+                  label='100 day Rolling Mean of Spillover Index', linewidth=1, alpha=0.8)
     plt.legend(loc='best')
-    plt.hlines(0,datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1),alpha=0.6,lw=1)
+    plt.hlines(0, datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1), alpha=0.6, lw=1)
     plt.xlim(datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1))
-    plt.ylim(-0.05,1.05)
+    plt.ylim(-0.05, 1.05)
     plt.savefig('Graphs/SOIOvertime.pdf', bbox_inches='tight')
     plt.show()
     print df
@@ -281,20 +281,65 @@ def LLovertime():
     df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/results/SOI_100_days.csv", index_col=0)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')
     df['RollMean100'] = pd.rolling_mean(df['LL'], 100, min_periods=1)
-    plt.plot_date(df.index, df['LL'],markersize=2,fmt='-', label='Lag Length',color = c[1],alpha=0.3)
-    plt.plot_date(df.index, df['RollMean100'], fmt='-', color=c[0],lw=1,alpha=0.8,
+    plt.plot_date(df.index, df['LL'], markersize=2, fmt='-', label='Lag Length', color=c[1], alpha=0.3)
+    plt.plot_date(df.index, df['RollMean100'], fmt='-', color=c[0], lw=1, alpha=0.8,
                   label='100 day Rolling Mean of Lag Length')
 
     ax = plt.gca()
-    plt.ylim(-0.4,16.4)
-    ax.set_yticks([0,2,4,6,8,10,12,14,16])
-    plt.hlines(0,datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1),alpha=0.6,lw=1)
+    plt.ylim(-0.4, 16.4)
+    ax.set_yticks([0, 2, 4, 6, 8, 10, 12, 14, 16])
+    plt.hlines(0, datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1), alpha=0.6, lw=1)
     plt.xlim(datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1))
 
     plt.title('Lag Length by AIC')
     plt.legend(loc='best')
     plt.savefig('Graphs/LLOvertime.pdf', bbox_inches='tight')
     plt.show()
+
+
+def resultsG1():
+    df = pd.read_csv('results040116.csv', index_col=0)
+    df.index = pd.to_datetime(df.index, format="%d-%m-%Y")
+    df = df - 1
+
+    for mdl in ['nwrk', 'bnch']:
+        plt.fill_between(df.index, y1=df[mdl + '_VaR5'], y2=1, color=c[0], alpha=0.4, edgecolor="None", label='VaR 5%')
+        plt.fill_between(df.index, y1=df[mdl + '_VaR1'], y2=df[mdl + '_VaR5'], color=c[0], alpha=0.9, edgecolor="None", label='VaR 1%')
+
+
+        p1 = mpatches.Patch(color=c[0], alpha=0.4, linewidth=0)
+        p2 = mpatches.Patch(color=c[0], alpha=0.9, linewidth=0)
+
+
+        set1 = df['realized'][df['realized'] > df[mdl + '_VaR5']]
+        set2 = df['realized'][df[mdl + '_VaR1'] < df['realized']][df['realized'] < df[mdl + '_VaR5']]
+        set3 = df['realized'][df['realized'] < df[mdl + '_VaR1']]
+
+        plt.scatter(set1.index, set1, s=0.5, alpha=0.8, color=c[2], label="No break")
+        plt.scatter(set2.index, set2, s=0.5, alpha=1, color=c[4], label="5% break")
+        plt.scatter(set3.index, set3, s=0.5, alpha=1, color=c[3], label="1% break")
+
+        c1 = mpatches.Circle((0,0),color=c[2], alpha=0.8, radius=1.5)
+        c2 = mpatches.Circle((0,0),color=c[4], alpha=1, radius=1.5)
+        c3 = mpatches.Circle((0,0),color=c[3], alpha=1, radius=1.5)
+
+        plt.hlines(0, datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1), alpha=0.6, lw=1)
+
+        plt.xlim(datetime.datetime(1994, 12, 27), datetime.datetime(2013, 1, 1))
+        plt.ylim(-0.11, 0)
+
+        #plt.savefig(mdl + '_VarLevels.pdf')
+        plt.legend((p1,p2,c1,c2,c3),('VaR 5%','Var 1%','No break','5% Break','1% Break'),loc='lower left')
+        plt.show()
+        print len(df)
+        print mdl
+        print len(df[df['realized'] < df[mdl + '_VaR5']])
+        print 100*len(df[df['realized'] < df[mdl + '_VaR5']])/len(df)
+        print
+        print len(df[df['realized'] < df[mdl + '_VaR1']])
+        print 100*len(df[df['realized'] < df[mdl + '_VaR1']])/len(df)
+        print
+        exit()
 
 
 if __name__ == "__main__":
@@ -311,4 +356,5 @@ if __name__ == "__main__":
         'xtick.color': '#66666A'
     })
     # DecayBoot()
-    SOIovertime()
+    # SOIovertime()
+    resultsG1()
