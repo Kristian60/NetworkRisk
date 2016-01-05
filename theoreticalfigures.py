@@ -262,7 +262,7 @@ def DescriptiveStatsandStylizedFacts():
 
 
 def SOIovertime():
-    df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/results/SOI_50_days.csv", index_col=0)
+    df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/results/SOI_100_days.csv", index_col=0)
     df['RollMean100'] = pd.rolling_mean(df['SOI'], 100, min_periods=1)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')
     plt.plot_date(df.index, df['SOI'], fmt='-', label='Spillover Index',color=c[1],lw=1,alpha=0.3)
@@ -278,7 +278,7 @@ def SOIovertime():
 
 
 def LLovertime():
-    df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/results/SOI_50_days.csv", index_col=0)
+    df = pd.read_csv("C:/Users/Thomas/Dropbox/UNI/Speciale/NetworkRisk/results/SOI_100_days.csv", index_col=0)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')
     df['RollMean100'] = pd.rolling_mean(df['LL'], 100, min_periods=1)
     plt.plot_date(df.index, df['LL'],markersize=2,fmt='-', label='Lag Length',color = c[1],alpha=0.3)
