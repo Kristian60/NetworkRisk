@@ -6,13 +6,12 @@ import matplotlib.pyplot as plt
 import seaborn
 import pandas as pd
 import matplotlib.ticker as plticker
-from scipy import stats
+import statsmodels.api as sm
 from scipy.stats import expon
 from statsmodels.tsa.stattools import acf
 import random
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
-
 from matplotlib.lines import Line2D
 from matplotlib import gridspec
 import Connectedness
@@ -21,6 +20,20 @@ import datetime
 pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
+
+c = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
+
+seaborn.set(context='paper', font='Segoe UI', rc={
+    'axes.facecolor': '#F0F0F0',
+    'figure.facecolor': '#F0F0F0',
+    'savefig.facecolor': '#F0F0F0',
+    'figure.dpi': 300,
+    'savefig.dpi': 300,
+    'grid.color': '#DADADA',
+    'ytick.color': '#66666A',
+    'xtick.color': '#66666A'
+})
+
 
 def VaR():
     a = np.random.normal(0, 0.2, 1000000)
@@ -305,12 +318,11 @@ def resultsG1():
 
     for mdl in ['nwrk', 'bnch']:
         plt.fill_between(df.index, y1=df[mdl + '_VaR5'], y2=1, color=c[0], alpha=0.4, edgecolor="None", label='VaR 5%')
-        plt.fill_between(df.index, y1=df[mdl + '_VaR1'], y2=df[mdl + '_VaR5'], color=c[0], alpha=0.9, edgecolor="None", label='VaR 1%')
-
+        plt.fill_between(df.index, y1=df[mdl + '_VaR1'], y2=df[mdl + '_VaR5'], color=c[0], alpha=0.9, edgecolor="None",
+                         label='VaR 1%')
 
         p1 = mpatches.Patch(color=c[0], alpha=0.4, linewidth=0)
         p2 = mpatches.Patch(color=c[0], alpha=0.9, linewidth=0)
-
 
         set1 = df['realized'][df['realized'] > df[mdl + '_VaR5']]
         set2 = df['realized'][df[mdl + '_VaR1'] < df['realized']][df['realized'] < df[mdl + '_VaR5']]
@@ -329,31 +341,65 @@ def resultsG1():
         plt.xlim(datetime.datetime(1994, 12, 27), datetime.datetime(2013, 1, 1))
         plt.ylim(-0.11, 0)
 
-        plt.legend((p1,p2,c1,c2,c3),('VaR 5%','Var 1%','No break','5% Break','1% Break'),loc='lower left')
+        plt.legend((p1, p2, c1, c2, c3), ('VaR 5%', 'Var 1%', 'No break', '5% Break', '1% Break'), loc='lower left')
         ax = plt.gca()
-        ax.set_yticklabels(['','-10%','-8%','-6%','-4%','-2%','0%'])
+        ax.set_yticklabels(['', '-10%', '-8%', '-6%', '-4%', '-2%', '0%'])
         if mdl == "nwrk":
             plt.title('Network model')
         else:
             plt.title('Benchmark model')
         plt.show()
 
-        #plt.savefig(mdl + '_VarLevels.pdf')
+        plt.savefig(mdl + '_VarLevels.pdf')
         plt.clf()
 
-if __name__ == "__main__":
-    c = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
 
-    seaborn.set(context='paper', font='Segoe UI', rc={
-        'axes.facecolor': '#F0F0F0',
-        'figure.facecolor': '#F0F0F0',
-        'savefig.facecolor': '#F0F0F0',
-        'figure.dpi': 300,
-        'savefig.dpi': 300,
-        'grid.color': '#DADADA',
-        'ytick.color': '#66666A',
-        'xtick.color': '#66666A'
-    })
+def graph_marginalDist(marginalReturn, names):
+    mR = pd.DataFrame(marginalReturn)
+    for x, n in enumerate(names):
+        print mR.ix[:, x]
+
+        seaborn.kdeplot(mR.ix[:, x], shade=True, color=c[0])
+        plt.title(n)
+
+        ax = plt.gca()
+        ax.set_xticklabels(['', '-4%', '-2%', '0%', '+2%', '+4%'])
+        ax.set_yticklabels([''])
+        ax.set_ylim(0, 52.5)
+        ax.set_xlim(0.945, 1.055)
+        ax.legend_.remove()
+        plt.savefig(n + "_marginal.pdf")
+        plt.show()
+
+
+def graph_pdf(dailyReturns):
+    kde = sm.nonparametric.KDEUnivariate(dailyReturns)
+    kde.fit()
+    v1 = len(kde.cdf[kde.cdf<0.05])
+    var = np.array(dailyReturns)[np.array(dailyReturns) < np.percentile(dailyReturns,5)]
+    print var
+    plt.vlines(kde.support[v1],0,100,colors=c[4],lw=1.5,linestyles='-', label='VaR 5%', zorder=5)
+    plt.vlines(np.mean(var),0,100,colors=c[4],lw=1.5,linestyles=':', label='Expected shortfall 5%', zorder=5)
+
+    plt.plot(kde.support[v1:], kde.density[v1:], color=c[1], alpha=1,zorder=2)
+    plt.plot(kde.support[:v1], kde.density[:v1], color=c[3], alpha=1,zorder=2)
+    plt.fill_between(kde.support[v1:], kde.density[v1:], edgecolor="None", color=c[1], alpha=0.55,zorder=3)
+    plt.fill_between(kde.support[:v1], kde.density[:v1], edgecolor="None", color=c[3], alpha=0.55,zorder=3)
+    ax = plt.gca()
+    w=0.025
+    ax.set_xlim(1-w-0.0005, 1+w+0.0005)
+    ax.set_ylim(-3, 79)
+    ax.set_xticklabels(['-3%', '-2%', '-1%', '0%', '+1%','+2%','+3%'])
+    ax.set_yticklabels([''])
+    plt.legend()
+
+    #plt.show()
+    plt.savefig('probdf.pdf')
+
+    exit()
+
+
+if __name__ == "__main__":
     # DecayBoot()
     # SOIovertime()
     resultsG1()

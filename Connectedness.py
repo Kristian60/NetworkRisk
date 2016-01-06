@@ -14,10 +14,10 @@ import sys
 from functools import partial
 import multiprocessing as mp
 from scipy.stats import expon
-
+import theoreticalfigures
 
 if hasattr(sys, 'getwindowsversion'):
-    it = 5
+    it = 10000
     import matplotlib.pyplot as plt
     import seaborn as sns
 
@@ -38,7 +38,6 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     :param H: integer, size of step ahead forecast
     :return: a dataframe of connectivity or concentration parameters
     """
-
 
     model = sm.VAR(data)
     results = model.fit(maxlags=H, ic='aic')
@@ -69,7 +68,8 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     return pd.DataFrame(GVD), SIGMA, _ma_rep, results.resid
 
 
-def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True, report_traces=False):
+def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True, report_traces=False, report_marginalDist=False,
+                  graph_distribution=False):
     '''
 
     Ikke færdiggjort.
@@ -89,6 +89,7 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True, report_tra
 
     dailyReturns = []
     dailyTraces = []
+    marginalReturn = []
     residNp = resid.values
 
     impulseResponseSystem = marep[::-1]  # Invert impulse responses to fit DataFrame
@@ -106,7 +107,6 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True, report_tra
         simValues = simV.copy()
         shockMatrix = shockM[i]
 
-
         if dummy == True:
             pseudoReturn = np.product(np.sum(shockMatrix[15:] + 1, axis=1) / 11)
             dailyReturns.append(pseudoReturn)
@@ -117,17 +117,24 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True, report_tra
                 simValues[t + 1] *= simValues[t] * (simReturns[t] + 1)
 
             if report_traces:
-                dailyTraces.append(simValues.sum(axis=1)/17)
+                dailyTraces.append(simValues.sum(axis=1) / 17)
+
+            if report_marginalDist:
+                marginalReturn.append(simValues[-1, :])
 
             dailyReturns.append(simValues[-1, :].sum() / simValues.shape[1])
 
     if report_traces:
         return np.array(dailyTraces)
+    if report_marginalDist:
+        theoreticalfigures.graph_marginalDist(marginalReturn, resid.columns)
+    if graph_distribution:
+        theoreticalfigures.graph_pdf(dailyReturns)
 
     return dailyReturns
 
-def bootstrapExpDecay(data, nIterations):
 
+def bootstrapExpDecay(data, nIterations):
     d1 = data.index[-1]
     d1 = datetime.datetime(d1.year, d1.month, d1.day)
 
@@ -319,7 +326,6 @@ def formalTests(results, realData):
 
 
 def benchmarkModel(data, bootstrapPoolDays=500):
-
     firstDay = data.index[bootstrapPoolDays]
     relevantDaysSet = data[firstDay:]
 
@@ -338,9 +344,9 @@ def benchmarkModel(data, bootstrapPoolDays=500):
         assetCount = bootstrapPool.count(axis=1)
 
         if len(assetCount.unique()) == 1:
-            equalWeightedPortfolioReturn = 1+(bootstrapPool.mean(axis=1))
+            equalWeightedPortfolioReturn = 1 + (bootstrapPool.mean(axis=1))
         else:
-            equalWeightedPortfolioReturn = 1+(bootstrapPool.sum(axis=1)/assetCount)
+            equalWeightedPortfolioReturn = 1 + (bootstrapPool.sum(axis=1) / assetCount)
 
         draw = [random.choice(equalWeightedPortfolioReturn.values) for x in range(10000)]
 
@@ -349,17 +355,16 @@ def benchmarkModel(data, bootstrapPoolDays=500):
         es1 = np.mean(np.extract(draw < var1, draw))
         es5 = np.mean(np.extract(draw < var5, draw))
 
-        output = np.append(output,[day,var1,var5,es1,es5,1+real_return[activeAssets].mean()])
+        output = np.append(output, [day, var1, var5, es1, es5, 1 + real_return[activeAssets].mean()])
 
-
-    out_df = pd.DataFrame(output.reshape((len(output)/6,6)),columns=['Date','Var1','Var5','ES1','ES5','Real Values'])
+    out_df = pd.DataFrame(output.reshape((len(output) / 6, 6)),
+                          columns=['Date', 'Var1', 'Var5', 'ES1', 'ES5', 'Real Values'])
     out_df.to_csv('benchmark_model.csv')
 
     return
 
 
 def btestthread(start, end, memory, model, trainingData, results, date):
-
     f = open("log.txt", "w")
     f.write('start: ' + str(start) + '\n')
     f.write('end: ' + str(end) + '\n')
@@ -448,28 +453,28 @@ def backtest(trainingData, realData, start, end, memory, model):
 
 
 if __name__ == "__main__":
-    try:
-        df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
-        print "data loaded", time.time() - t0
-        df.index = pd.to_datetime(df.index)
-        daily = df.resample('d', how='last').dropna(how='all')
-        df = np.log(df).diff().dropna(how='all')
-        #daily = np.log(daily).diff().dropna(how='all')
-        #benchmarkModel(daily)
-        backtest_output = backtest(trainingData=df, realData=daily, start='19941227', end='20150101', memory=100,
+    # try:
+    df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
+    print "data loaded", time.time() - t0
+    df.index = pd.to_datetime(df.index)
+    daily = df.resample('d', how='last').dropna(how='all')
+    df = np.log(df).diff().dropna(how='all')
+    # daily = np.log(daily).diff().dropna(how='all')
+    # benchmarkModel(daily)
+    backtest_output = backtest(trainingData=df, realData=daily, start='20051227', end='20150101', memory=100,
                                model=estimateAndBootstrap)
 
-        file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
-        for a, b in zip(backtest_output.index, backtest_output.values):
-            file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
-        file.close()
-        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
-                    'Ireren er færdig')
-        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
-                    'Ireren er færdig')
+    file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
+    for a, b in zip(backtest_output.index, backtest_output.values):
+        file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
+    file.close()
+    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
+                'Ireren er færdig')
+    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
+                'Ireren er færdig')
 
-    except:
-        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
-                    'Ireren har fejlet')
-        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
-                    'Ireren har fejlet')
+    # except:
+    #    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
+    #                'Ireren har fejlet')
+    #    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
+    #                'Ireren har fejlet')
