@@ -16,6 +16,7 @@ from matplotlib.lines import Line2D
 from matplotlib import gridspec
 import Connectedness
 import datetime
+import statsmodels.api as sm
 
 pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
@@ -149,25 +150,36 @@ def BGallo():
 
 
 def DecayBoot():
-    days = 10
-    a = [expon.pdf(j / 1000 + 1, scale=1.5) + .03 for j in np.arange(0, 390 * days, 1)]
+    days = 100
     b = []
-    for i in np.linspace(1, 3, days):
-        b.extend([expon.pdf(i) for _ in range(390)])
-    fig, axs = plt.subplots(1, 1)
 
-    plt.vlines(0, 0, 0.5, lw=0.5)
-    plt.hlines(0, -200, 4000, lw=1)
-    axs.plot(b, label='Discrete Exponential Decay', color=c[1])
-    axs.plot(a, label='Strictly Exponential Decay', color=c[2])
-    axs.set_yticklabels([''])
-    axs.set_ylabel('Relative probability of selecting observation')
-    axs.set_xlabel('Minutes since observation')
+    for i in range(1, days):
+        b.extend([1-expon.cdf(i,scale=100) for _ in range(390)])
+    a = [1-expon.cdf(j, scale=100) + 0.003 for j in np.linspace(1, days, len(b))]
+    fig, ax = plt.subplots(1, 2,figsize=(18,6))
+
+    for nr,axs in enumerate(ax):
+        if nr == 0:
+            axs.plot(b, label='Discrete Exponential Decay', color=c[1],lw=1)
+            axs.plot(a, label='Strictly Exponential Decay', color=c[2],lw=1)
+            axs.set_ylabel('Relative probability of selecting observation')
+            axs.set_xlabel('Days since observation')
+            axs.set_ylim(-0.05,1.05)
+            axs.set_xlim(-2500,len(b)+2500)
+            axs.set_xticks(range(0,len(b)+3900,3900))
+            axs.set_xticklabels(range(0,110,10))
+        else:
+            axs.plot(b, label='Discrete Exponential Decay', color=c[1])
+            axs.plot(a, label='Strictly Exponential Decay', color=c[2])
+            axs.set_xlim(-250,3900+250)
+            axs.set_ylim(0.87,1.01)
+            axs.set_xticks(range(0,3900+390,390))
+            axs.set_xticklabels(range(0,11,1))
+
     plt.legend(loc='best')
-    plt.xlim(-100, 3900)
-    plt.ylim(0, 0.422)
-    plt.savefig('ExponDecay.pdf')
-    # plt.show()
+    plt.savefig('Graphs/ExponDecay.pdf',bbox_inches='tight')
+    plt.tight_layout()
+    plt.show()
 
 
 def DescriptiveStatsandStylizedFacts():
@@ -310,6 +322,32 @@ def LLovertime():
     plt.savefig('Graphs/LLOvertime.pdf', bbox_inches='tight')
     plt.show()
 
+def QQPlot():
+    df = pd.read_csv('data/TData9313_final6.csv', index_col=0)
+    df.index = pd.to_datetime(df.index)
+    df = np.log(df).diff()[1:]
+    df = df.dropna(axis=1, how='all')
+    r = np.array(df[['AAPL']].dropna())
+    norm = np.random.normal(0,np.std(r),1000000)
+    x = [np.percentile(norm,j) for j in range(1,100)]
+    y = [np.percentile(r,j) for j in range(1,100)]
+    plt.scatter(x,y,color=c[3],s=5,alpha=0.6)
+    ax = plt.gca()
+    val = 0.01
+    extra = 0.0025
+    plt.plot([-val,val],[-val,val],color=c[1])
+    plt.xlim(-val-extra,val+extra)
+    plt.ylim(-val-extra,val+extra)
+    plt.xlabel('Theoretical Quantile')
+    plt.ylabel('Sample Quantile')
+    ylabels = [str(round(j,3)*100) + ' %' for j in ax.get_yticks()]
+    xlabels = [str(round(j,3)*100) + ' %' for j in ax.get_xticks()]
+    ax.set_yticklabels(ylabels)
+    ax.set_xticklabels(xlabels)
+    #plt.tight_layout()
+    plt.savefig('Graphs/QQPlot.pdf',bbox_inches='tight')
+    plt.show()
+
 
 def resultsG1():
     df = pd.read_csv('results040116.csv', index_col=0)
@@ -402,4 +440,4 @@ def graph_pdf(dailyReturns):
 if __name__ == "__main__":
     # DecayBoot()
     # SOIovertime()
-    resultsG1()
+    DecayBoot()
