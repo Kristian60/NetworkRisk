@@ -12,6 +12,8 @@ from statsmodels.tsa.stattools import acf
 import random
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
+
+from matplotlib.lines import Line2D
 from matplotlib import gridspec
 import Connectedness
 import datetime
@@ -19,7 +21,6 @@ import datetime
 pd.set_option('notebook_repr_html', True)
 pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
-
 
 def VaR():
     a = np.random.normal(0, 0.2, 1000000)
@@ -315,32 +316,30 @@ def resultsG1():
         set2 = df['realized'][df[mdl + '_VaR1'] < df['realized']][df['realized'] < df[mdl + '_VaR5']]
         set3 = df['realized'][df['realized'] < df[mdl + '_VaR1']]
 
-        plt.scatter(set1.index, set1, s=0.5, alpha=0.8, color=c[2], label="No break")
-        plt.scatter(set2.index, set2, s=0.5, alpha=1, color=c[4], label="5% break")
-        plt.scatter(set3.index, set3, s=0.5, alpha=1, color=c[3], label="1% break")
+        plt.scatter(set1.index, set1, s=1, alpha=0.8, color=c[2], label="No break")
+        plt.scatter(set2.index, set2, s=1, alpha=1, color=c[4], label="5% break")
+        plt.scatter(set3.index, set3, s=1, alpha=1, color=c[3], label="1% break")
 
-        c1 = mpatches.Circle((0,0),color=c[2], alpha=0.8, radius=1.5)
-        c2 = mpatches.Circle((0,0),color=c[4], alpha=1, radius=1.5)
-        c3 = mpatches.Circle((0,0),color=c[3], alpha=1, radius=1.5)
+        c1 = Line2D([0], [0], linestyle="none", marker="o", alpha=0.8, markersize=5, markerfacecolor=c[2])
+        c2 = Line2D([0], [0], linestyle="none", marker="o", alpha=1, markersize=5, markerfacecolor=c[4])
+        c3 = Line2D([0], [0], linestyle="none", marker="o", alpha=1, markersize=5, markerfacecolor=c[3])
 
         plt.hlines(0, datetime.datetime(1993, 1, 1), datetime.datetime(2014, 5, 1), alpha=0.6, lw=1)
 
         plt.xlim(datetime.datetime(1994, 12, 27), datetime.datetime(2013, 1, 1))
         plt.ylim(-0.11, 0)
 
-        #plt.savefig(mdl + '_VarLevels.pdf')
         plt.legend((p1,p2,c1,c2,c3),('VaR 5%','Var 1%','No break','5% Break','1% Break'),loc='lower left')
+        ax = plt.gca()
+        ax.set_yticklabels(['','-10%','-8%','-6%','-4%','-2%','0%'])
+        if mdl == "nwrk":
+            plt.title('Network model')
+        else:
+            plt.title('Benchmark model')
         plt.show()
-        print len(df)
-        print mdl
-        print len(df[df['realized'] < df[mdl + '_VaR5']])
-        print 100*len(df[df['realized'] < df[mdl + '_VaR5']])/len(df)
-        print
-        print len(df[df['realized'] < df[mdl + '_VaR1']])
-        print 100*len(df[df['realized'] < df[mdl + '_VaR1']])/len(df)
-        print
-        exit()
 
+        #plt.savefig(mdl + '_VarLevels.pdf')
+        plt.clf()
 
 if __name__ == "__main__":
     c = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
