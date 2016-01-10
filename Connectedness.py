@@ -10,14 +10,17 @@ import scipy
 import time
 from statsmodels.tsa.vector_ar.var_model import ma_rep
 import datetime
+import math
 import sys
 from functools import partial
 import multiprocessing as mp
 from scipy.stats import expon
 import theoreticalfigures
+from decimal import Decimal
+
 
 if hasattr(sys, 'getwindowsversion'):
-    it = 10000
+    it = 100
     import matplotlib.pyplot as plt
     import seaborn as sns
 
@@ -38,7 +41,6 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     :param H: integer, size of step ahead forecast
     :return: a dataframe of connectivity or concentration parameters
     """
-
     model = sm.VAR(data)
     results = model.fit(maxlags=H, ic='aic')
 
@@ -81,7 +83,6 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True, report_tra
     :param nIterations:
     :return:
     '''
-
     # Number of periods to simulate, and length of the response to shocks
     periods = int(60 * 6.5 + 1)  # en dag i minutter
     responseLength = len(marep)
@@ -148,7 +149,6 @@ def bootstrapExpDecay(data, nIterations):
     minsPerDay = data.resample("d", how="count").values[:, 0]
     utilizedLags = int(391 - minsPerDay[0])
     bootstrapLength = 391 + utilizedLags
-
     data = np.insert(data.values, 0, np.zeros_like(data.ix[:utilizedLags, :]), axis=0)
     data = data.reshape((len(data) / 391, 391, data.shape[1]))
     uninumbers = np.random.uniform(size=(bootstrapLength, nIterations))
@@ -159,56 +159,12 @@ def bootstrapExpDecay(data, nIterations):
     return b
 
 
-def realizedDaily(day=False):
-    df = pd.read_csv('data/dailyData_e.csv', sep=",", index_col=0)
-    df.index = pd.to_datetime(df.index, format="%Y-%m-%d")
-    df = np.log(df).diff().dropna() + 1
+def VarFormalTest(results, alpha, data, name=None):
+    data = _genDailyReturns(data)
+    results = results - 1
+    alpha = float(alpha)
 
-    if not day:
-        return (df.sum(axis=1) / len(df.columns))
-    else:
-        return (df.sum(axis=1) / len(df.columns))[day]
-
-
-def mcVar(data, iter):
-    data = (1 + data).resample('b', how='prod').dropna()
-    _returns = data.sum(axis=1) / len(data.columns)
-
-    _mean = _returns.mean()
-    _std = _returns.std()
-
-    return np.random.normal(_mean, _std, iter)
-
-
-def zeroDeltaVar(data):
-    data = (1 + data).resample('b', how='prod').dropna()
-    _returns = data.sum(axis=1) / len(data.columns)
-
-    _mean = _returns.mean()
-    _std = _returns.std()
-
-    z1 = -scipy.stats.norm.ppf(0.01)
-    z5 = -scipy.stats.norm.ppf(0.05)
-    return _mean - z1 * _std, _mean - z5 * _std
-
-
-def estimateAndBootstrap(df):
-    H = 15
-    sparse_method = False
-
-    df = df.dropna(axis=1, how='any')
-    con, sigma, marep, resid = EstimateVAR(df, H, sparse_method=sparse_method)
-    returnSeries = BootstrapMult(resid, marep, it)
-    var1 = np.percentile(returnSeries, 1)
-    var5 = np.percentile(returnSeries, 5)
-    es1 = np.mean(np.extract(returnSeries < var1, returnSeries))
-    es5 = np.mean(np.extract(returnSeries < var5, returnSeries))
-
-    return var1, var5, es1, es5, returnSeries
-
-
-def formalTests(results, realData):
-    def unconditionalCoverage(events, p, t):
+    def unconditionalCoverage(events, t):
         '''
         Simple binomial test of event frequency, Jorion(2001)
         :param events: a pandas series of True/False events of events occuring
@@ -217,9 +173,10 @@ def formalTests(results, realData):
         :return: the p-value of the test
         '''
         x = sum(events)
-        return scipy.stats.norm.cdf((x - p * t) / np.sqrt(p * (1 - p) * t))
+        return (x - alpha * t) / np.sqrt(alpha * (1 - alpha) * t), \
+               scipy.stats.norm.cdf((x - alpha * t) / np.sqrt(alpha * (1 - alpha) * t))
 
-    def pofTest(events, p, t, raw_output=False):
+    def pofTest(events, t, raw_output=False):
         '''
         Proportion of faliures test. LR-test that follows a chi2 distribution
         Kupiec(1995)
@@ -229,14 +186,28 @@ def formalTests(results, realData):
         :return: the p-value of the test
         '''
         x = sum(events)
+
         if raw_output:
             return -2 * np.log(
-                (np.power(1 - p, t - x) * np.power(p, x)) / (np.power(1 - (x / t), t - x) * np.power(x / t, x)))
+                (np.power(1 - alpha, t - x) * np.power(alpha, x)) / (np.power(1 - (x / t), t - x) * np.power(x / t, x)))
         else:
-            return scipy.stats.chi2.cdf(-2 * np.log(
-                (np.power(1 - p, t - x) * np.power(p, x)) / (np.power(1 - (x / t), t - x) * np.power(x / t, x))), df=1)
 
-    def tuffTest(events, p, raw_output=False):
+            opt_breaks = Decimal(alpha) ** Decimal(x)
+            opt_nobreaks = Decimal(1 - alpha) ** Decimal((t - x))
+            model_breaks = Decimal(x / t) ** Decimal(x)
+            model_nobreaks = Decimal(1 - (x / t)) ** Decimal(t - x)
+
+            num = (opt_breaks * opt_nobreaks)
+            den = (model_breaks * model_nobreaks)
+
+            aux = num / den
+            aux = float(aux)
+
+            stat = -2 * np.log(aux)
+
+            return stat, scipy.stats.chi2.cdf(stat, df=1)
+
+    def tuffTest(events, raw_output=False):
         '''
         Time untill first faliure test, suggested by Kupiec(1995)
         :param events: a pandas series of True/False events of events occuring
@@ -250,12 +221,14 @@ def formalTests(results, realData):
             v = np.argmax(events.values) + 1
 
             if raw_output:
-                return (v, -2 * np.log((p * np.power((1 - p), v - 1)) / ((1 / v) * np.power(1 - (1 / v), v - 1))))
+                return (
+                    v, -2 * np.log((alpha * np.power((1 - alpha), v - 1)) / ((1 / v) * np.power(1 - (1 / v), v - 1))))
             else:
-                return scipy.stats.chi2.cdf(
+                return -2 * np.log(
+                    (p * np.power((1 - p), v - 1)) / ((1 / v) * np.power(1 - (1 / v), v - 1))), scipy.stats.chi2.cdf(
                     -2 * np.log((p * np.power((1 - p), v - 1)) / ((1 / v) * np.power(1 - (1 / v), v - 1))), df=1)
 
-    def christoffersenIFT(events, p, t):
+    def christoffersenIFT(events, t):
         '''
         the tuffTest combined with a test of independent events.
         nxx defines the simultaneous probabilities of an event happening after an event/non-event
@@ -283,46 +256,109 @@ def formalTests(results, realData):
 
             # Unconditional probability for an event
             pi = (n01 + n11) / (n00 + n01 + n10 + n11)
+
+
         except ZeroDivisionError:
             return None
 
-        LRind = -2 * np.log((np.power((1 - pi), n00 + n10) * np.power(pi, n01 + n11)) / (
-            np.power(1 - pi0, n00) * np.power(pi0, n01) * np.power(1 - pi1, n10) * np.power(pi1, n11)))
+        if n00 + n10 == 0:
+            n1 = 1
+        else:
+            n1 = Decimal(1 - pi) ** Decimal(n00 + n10)
 
-        return scipy.stats.chi2.cdf(LRind, 1)
+        if n01 + n11 == 0:
+            n2 = 1
+        else:
+            n2 = Decimal(pi) ** Decimal(n01 + n11)
 
-    def mixedKupiecTest(events, p, t):
+        num = n1 * n2
+
+        if n00 == 0:
+            d1 = 1
+        else:
+            d1 = Decimal(1 - pi0) ** Decimal(n00)
+
+        if n01 == 0:
+            d2 = 1
+        else:
+            d2 = Decimal(pi0) ** Decimal(n01)
+
+        if n10 == 0:
+            d3 = 1
+        else:
+            d3 = Decimal(1 - pi1) ** Decimal(n10)
+        if n11 == 0:
+            d4 = 1
+        else:
+            d4 = Decimal(pi1) ** Decimal(n11)
+
+        dem = d1 * d2 * d3 * d4
+
+        LRind = -2 * np.log(float(num / dem))
+
+        return LRind, scipy.stats.chi2.cdf(LRind, df=1)
+
+    def mixedKupiecTest(events, t):
 
         nEvents = sum(events)
         LRind = 0
         for e in range(nEvents):
-            n, LRtuff = tuffTest(events, p, raw_output=True)
+            n, LRtuff = tuffTest(events, raw_output=True)
             LRind += LRtuff
             events = events[n:]
 
-        LRpof = pofTest(events, p, t, raw_output=True)
-        return scipy.stats.chi2.cdf(LRpof, nEvents)
+        return LRind / nEvents, scipy.stats.chi2.cdf(LRind, nEvents)
 
-    data = pd.concat([results, realData], axis=1).dropna()
-    data['e1'] = data[0] < data['VaR1']
-    data['e5'] = data[0] < data['VaR5']
+    break_data = pd.concat([results, data], axis=1, keys=["results", "data"]).dropna()
+    break_data['breaks'] = break_data['data'] < break_data['results']
+    T = float(len(break_data))
+    events = break_data['breaks']
 
-    data.to_csv('Events_' + time.strftime("%Y%m%d", time.gmtime()) + '.csv')
+    tests = pd.DataFrame(index=["Unconditional coverage", "POF test", "Kupiec test", "Christoffersen test"],
+                         columns=['stat', 'pval', 'accepted','type', 'interpret p'])
 
-    t = len(data)
+    uc_s, uc_p = unconditionalCoverage(events, T)
+    pf_s, pf_p = pofTest(events, T)
+    ku_s, ku_p = mixedKupiecTest(events, T)
+    ch_s, ch_p = christoffersenIFT(events, T)
 
-    return [unconditionalCoverage(data['e1'], 0.01, t),
-            unconditionalCoverage(data['e5'], 0.05, t),
-            pofTest(data['e1'], 0.01, t),
-            pofTest(data['e5'], 0.05, t),
+    tests.loc["Unconditional coverage"] = [uc_s, uc_p, 0.05 < uc_p < 0.95, "two sided","0.05 < p < 0.95"]
+    tests.loc["POF test"] = [pf_s, pf_p, pf_p < 0.95, "one sided","       p < 0.95"]
+    tests.loc["Kupiec test"] = [ku_s, ku_p, ku_p < 0.95, "one sided","       p < 0.95"]
+    tests.loc["Christoffersen test"] = [ch_s, ch_p, ch_p < 0.95, "one sided","       p < 0.95"]
 
-            tuffTest(data['e1'], 0.1),
-            tuffTest(data['e5'], 0.5),
+    if name:
+        tests.to_csv('FormalTests_'+ name +'.csv')
+    else:
+        tests.to_csv('FormalTests_'+datetime.datetime.now().strftime("%Y%m%d")+'.csv')
+    return
 
-            mixedKupiecTest(data['e1'], 0.01, t),
-            mixedKupiecTest(data['e5'], 0.05, t),
-            christoffersenIFT(data['e1'], 0.01, t),
-            christoffersenIFT(data['e5'], 0.05, t)]
+def ESFormalTest(es, var, alpha, data, name=None):
+    data = _genDailyReturns(data)
+    es = es - 1
+    var = var - 1
+
+    break_data = pd.concat([es,var, data], axis=1, keys=["es","var", "data"]).dropna()
+    break_data['breaks'] = break_data['data'] < break_data['var']
+
+    break_data = break_data[break_data['breaks']]
+
+
+    break_data['stat'] = break_data['data']/break_data['es']
+
+    print break_data['stat'].mean()
+    return
+
+def berkowizTest(returnSeries,realized):
+
+    returnSeries = returnSeries-1
+    result = pd.Series(np.zeros(100),index=range(1,101))
+    for day in returnSeries.index:
+        buckets = [np.percentile(returnSeries.loc[day],x) for x in range(100)]
+        perc = np.argmax(realized.loc[day] < buckets)
+        result.loc[perc] += 1
+
+    result.to_csv('berkowiz.csv')
 
 
 def benchmarkModel(data, bootstrapPoolDays=500):
@@ -364,26 +400,12 @@ def benchmarkModel(data, bootstrapPoolDays=500):
     return
 
 
-def btestthread(start, end, memory, model, trainingData, results, date):
-    f = open("log.txt", "w")
-    f.write('start: ' + str(start) + '\n')
-    f.write('end: ' + str(end) + '\n')
-    f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
-    f.close()
-    dateMemory = date - datetime.timedelta(days=memory)
-    modelSim1p, modelSim5p, modelSimES1, modelSimES5 = model(trainingData[dateMemory:date])
-    results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
-
-    return [date, modelSim1p, modelSim5p, modelSimES1, modelSimES5]
-
-
 def backtestthread(trainingData, realData, start, end, memory, model):
     results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
 
     timerStart = time.time()
     func = partial(btestthread, start, end, memory, model, trainingData, results)
     for nrthreads in [1, 2, 3, 4, 5, 6, 8, 10, 15, 20, 30, 50, 100]:
-        nrthreads = 1
         t = results.iloc[:nrthreads, :].index
         pool = mp.Pool(nrthreads)
         timerStart = time.time()
@@ -394,28 +416,30 @@ def backtestthread(trainingData, realData, start, end, memory, model):
 
     duration = (time.time() - timerStart) / len(results.index)
 
-    tests = formalTests(results, realData)
-    tests.append(duration)
-    backtestRapport = pd.DataFrame([t for t in tests]
-                                   , index=[
-            'unconditional coverage 1%',
-            'unconditional coverage 5%',
-            'proportion of failures 1%',
-            'proportion of failures 5%',
-            'time until first failure 1%',
-            'time until first failure 5%',
-            'Christoffersen ift 1%',
-            'Christoffersen ift 5%',
-            'mixed Kupiec test 1%',
-            'mixed Kupiec test 5%',
-            'comp.duration per day'])
-
-    return backtestRapport
+    return
 
 
-def backtest(trainingData, realData, start, end, memory, model):
-    results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=realData[start:end].index)
+def _genLogReturn(data):
+    data = np.log(data).diff().dropna(how='all')
+    return data
+
+
+def _genDailyReturns(data):
+    data = data.resample('d', how='last').dropna(how='all')
+    data = np.log(data).diff().dropna(how='all')
+    data = data.mean(axis=1, numeric_only=True)
+    return data
+
+
+def NetworkModel(trainingData, start, end, memory, saveSimulations=False):
+
+    trainingData = _genLogReturn(trainingData)
+    daily = trainingData.resample('d', how='last').dropna(how='all')
+    results = pd.DataFrame(columns=['VaR1', 'VaR5', 'ES1', 'ES5'], index=daily[start:end].index)
     timerStart = time.time()
+
+    accReturnSeries = pd.DataFrame([])
+    f = open('sReturn.csv','w')
 
     for date in results.index:
         dStart = time.time()
@@ -426,30 +450,29 @@ def backtest(trainingData, realData, start, end, memory, model):
         f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
         f.close()
         dateMemory = date - datetime.timedelta(days=memory)
-        modelSim1p, modelSim5p, modelSimES1, modelSimES5, returnSeries = model(trainingData[dateMemory:date])
-        results.loc[date] = [modelSim1p, modelSim5p, modelSimES1, modelSimES5]
+
+        df = trainingData[dateMemory:date].dropna(axis=1, how='any')
+        df = df.dropna(axis=1, how='any')
+        con, sigma, marep, resid = EstimateVAR(df, H=15)
+        returnSeries = BootstrapMult(resid, marep, it)
+
+        if saveSimulations:
+            returnSeries = pd.DataFrame([returnSeries]).apply(np.round,decimals=5)
+            returnSeries.index = [date]
+            returnSeries.to_csv('rSeries.csv',mode="a",header=False)
+
+        var1 = np.percentile(returnSeries, 1)
+        var5 = np.percentile(returnSeries, 5)
+        es1 = np.mean(np.extract(returnSeries < var1, returnSeries))
+        es5 = np.mean(np.extract(returnSeries < var5, returnSeries))
+
+        results.loc[date] = [var1, var5, es1, es5]
         results.to_csv('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv")
         print time.time() - dStart
 
+
     duration = (time.time() - timerStart) / len(results.index)
-
-    tests = formalTests(results, realData)
-    tests.append(duration)
-    backtestRapport = pd.DataFrame([t for t in tests]
-                                   , index=[
-            'unconditional coverage 1%',
-            'unconditional coverage 5%',
-            'proportion of failures 1%',
-            'proportion of failures 5%',
-            'time until first failure 1%',
-            'time until first failure 5%',
-            'Christoffersen ift 1%',
-            'Christoffersen ift 5%',
-            'mixed Kupiec test 1%',
-            'mixed Kupiec test 5%',
-            'comp.duration per day'])
-
-    return backtestRapport
+    return
 
 
 if __name__ == "__main__":
@@ -457,17 +480,22 @@ if __name__ == "__main__":
     df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
     print "data loaded", time.time() - t0
     df.index = pd.to_datetime(df.index)
-    daily = df.resample('d', how='last').dropna(how='all')
-    df = np.log(df).diff().dropna(how='all')
-    # daily = np.log(daily).diff().dropna(how='all')
-    # benchmarkModel(daily)
-    backtest_output = backtest(trainingData=df, realData=daily, start='20051227', end='20150101', memory=100,
-                               model=estimateAndBootstrap)
 
-    file = open("Backtest_" + time.strftime("%Y%m%d", time.gmtime()) + ".txt", "w")
-    for a, b in zip(backtest_output.index, backtest_output.values):
-        file.write('{:30}'.format(a) + ",\t" + str(b[0]) + "\n")
-    file.close()
+#    res = pd.read_csv('resultstest.csv', index_col='Date')
+#    res.index = pd.to_datetime(res.index, format='%d-%m-%Y')
+
+
+    retS = pd.read_csv('rSeries.csv', index_col=0)
+    retS.index = pd.to_datetime(retS.index, format='%Y-%m-%d')
+
+    berkowizTest(retS,_genDailyReturns(df))
+
+
+#    ESFormalTest(es=res['bnch_ES5'], var=res['bnch_VaR5'], alpha=0.05, data=df, name='bnchES5p')
+
+
+    #NetworkModel(trainingData=df, start='20121227', end='20150101', memory=100, saveSimulations=True)
+
     mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
                 'Ireren er færdig')
     mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
