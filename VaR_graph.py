@@ -22,7 +22,7 @@ r = 0.1
 d = -1.0
 
 c1 = [0]*(4*scale)
-c1.extend([1.1]*(16*scale))
+c1.extend([1.2]*(16*scale))
 
 plt.plot(np.linspace(0,0.2,20*scale),c1, lw=1, label='Portfolio value', color=c[1])
 plt.fill_between(np.linspace(0,0.2,20*scale),c1,0, alpha=0.5, color=c[1])
@@ -30,12 +30,15 @@ plt.fill_between(np.linspace(0,0.2,20*scale),c1,0, alpha=0.5, color=c[1])
 plt.vlines(0.05, -1000, 1000, linestyles=':', lw=1)
 plt.hlines(0,0,0.2,alpha=0.5)
 
+
 plt.xlabel('Percentiles')
-plt.ylabel('Portfolio value')
-plt.legend()
-plt.ylim([-0.1,1.5])
+plt.ylim([-0.1,1.39])
 plt.xlim([-0.005,0.175])
 
+ax = plt.gca()
+
+ax.set_xticklabels(["","","$p$","",""])
+ax.set_yticklabels(["","","","","","","","$1+v$"])
 plt.savefig('div_fig1.pdf')
 plt.clf()
 
@@ -45,8 +48,8 @@ p2 = (0.04**2)
 p1 = 1-p0-p2
 
 c1 = [0]*(int(1*scale))
-c1.extend([0.55]*int(7*scale))
-c1.extend([1.1]*((20*scale)-len(c1)))
+c1.extend([0.6]*int(7*scale))
+c1.extend([1.2]*((20*scale)-len(c1)))
 
 
 plt.plot(np.linspace(0,0.2,20*scale),c1, lw=1, label='Portfolio value', color=c[1])
@@ -55,8 +58,13 @@ plt.fill_between(np.linspace(0,0.2,20*scale),c1,0, alpha=0.5, color=c[1])
 plt.vlines(0.05, -1000, 1000, linestyles=':', lw=1)
 plt.hlines(0,0,0.2,alpha=0.5)
 plt.legend()
-plt.ylabel('Portfolio value')
 plt.xlabel('Percentiles')
-plt.ylim([-0.1,1.5])
+plt.ylim([-0.1,1.39])
 plt.xlim([-0.005,0.175])
+
+
+ax = plt.gca()
+ax.set_xticklabels(["","","$p$","",""])
+ax.set_yticklabels(["","","","","$(1+v)/2$","","","$1+v$"])
+
 plt.savefig('div_fig2.pdf')

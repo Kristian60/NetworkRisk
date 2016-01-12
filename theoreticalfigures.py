@@ -436,8 +436,29 @@ def graph_pdf(dailyReturns):
 
     exit()
 
+def BerkowitzGraph(data):
+    print data.max()
+    print data.min()
+    bD = data[1].value_counts(sort=False)
+    print bD
+
+
+
+    seaborn.distplot(data,bins=100,kde=False,color=c[4],hist_kws={'edgecolor':'none'}, label="Percentile observations")
+
+    plt.hlines(len(data)/100,-10,110,colors=c[1], linestyles='-', alpha=1, lw=1,label="Expected number of observations")
+    plt.hlines(0,-10,110,colors='black', linestyles='-', alpha=0.5, lw=1)
+    plt.ylim(-4,90)
+    plt.xlim(1,100.9)
+    plt.legend(loc="upper left")
+    plt.title('Benchmark model')
+    plt.savefig('berk_bench.pdf')
+    plt.show()
+    exit()
+
 
 if __name__ == "__main__":
     # DecayBoot()
     # SOIovertime()
-    DecayBoot()
+    BerkowitzGraph(pd.read_csv('berkowiz_bench2.csv',index_col=0,header=None,skiprows=1))
+    #DecayBoot()

@@ -5,6 +5,7 @@ from __future__ import division
 import pandas as pd
 import numpy as np
 import statsmodels.tsa.api as sm
+import statsmodels.api as stat
 import random
 import scipy
 import time
@@ -63,7 +64,7 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
         r, c = GVD.shape
         for i in range(r):
             for j in range(c):
-                GVD[i, j] = 1 / np.sqrt(SIGMA[i, i]) * sum([_ma_rep[h, i].dot(SIGMA[j]) ** 2 for h in range(H)]) / sum(
+                GVD[i, j] = 1 / np.sqrt(SIGMA[j, j]) * sum([_ma_rep[h, i].dot(SIGMA[j]) ** 2 for h in range(H)]) / sum(
                     [_ma_rep[h, i, :].dot(SIGMA).dot(_ma_rep[h, i, :]) for h in range(H)])
             GVD[i] /= GVD[i].sum()
 
@@ -349,52 +350,72 @@ def ESFormalTest(es, var, alpha, data, name=None):
     print break_data['stat'].mean()
     return
 
-def berkowizTest(returnSeries,realized):
+def BerkowitzTest(bD):
 
-    returnSeries = returnSeries-1
-    result = pd.Series(np.zeros(100),index=range(1,101))
+
+    bD = ((bD - 0.5) / 100).apply(scipy.stats.norm.ppf).dropna()
+    return stat.stats.stattools.jarque_bera(bD)
+
+def generateBerkowizData(returnSeries,realized):
+
+    returnSeries = returnSeries
+    result = []
+    max_breaks = 0
+    min_breaks = 0
     for day in returnSeries.index:
-        buckets = [np.percentile(returnSeries.loc[day],x) for x in range(100)]
-        perc = np.argmax(realized.loc[day] < buckets)
-        result.loc[perc] += 1
+        buckets = [np.percentile(returnSeries.loc[day],x) for x in range(101)]
+        perc = sum(realized.loc[day] > buckets)
 
-    result.to_csv('berkowiz.csv')
+        if perc == 101:
+            print day
+            max_breaks += 1
+            perc = 100
+
+        if perc == 0:
+            min_breaks += 1
+            perc = 1
+
+        result.append(perc)
+
+    print "max_breaks", max_breaks
+    print "min_breaks", min_breaks
+    pd.DataFrame(result).to_csv('berkowiz_bench2.csv')
+    exit()
 
 
-def benchmarkModel(data, bootstrapPoolDays=500):
+
+def benchmarkModel(data, bootstrapPoolDays=500, saveSimulations=False):
+    data = _genDailyReturns(data)
     firstDay = data.index[bootstrapPoolDays]
     relevantDaysSet = data[firstDay:]
 
     out_df = pd.DataFrame()
     output = np.array([])
-    for day in relevantDaysSet.index:
+    for date in relevantDaysSet.index:
+        real_return = data.loc[date]
 
-        real_return = data.loc[day]
-
-        bootstrapPool = data[:day]
-        activeAssets = bootstrapPool[-50:].dropna(axis=1).columns.values
+        bootstrapPool = data[:date]
+        activeAssets = bootstrapPool[-50:].values
         bootstrapPool = bootstrapPool[-500:]
 
-        bootstrapPool = bootstrapPool[activeAssets]
+        draw = [random.choice(bootstrapPool.values) for x in range(10000)]
 
-        assetCount = bootstrapPool.count(axis=1)
+        if saveSimulations:
+            returnSeries = pd.DataFrame([draw]).apply(np.round,decimals=5)
+            returnSeries.index = [date]
+            returnSeries.to_csv('rSeries_benchmark.csv',mode="a",header=False)
 
-        if len(assetCount.unique()) == 1:
-            equalWeightedPortfolioReturn = 1 + (bootstrapPool.mean(axis=1))
-        else:
-            equalWeightedPortfolioReturn = 1 + (bootstrapPool.sum(axis=1) / assetCount)
+#        var1 = np.percentile(draw, 1)
+#        var5 = np.percentile(draw, 5)
+#        es1 = np.mean(np.extract(draw < var1, draw))
+#        es5 = np.mean(np.extract(draw < var5, draw))
 
-        draw = [random.choice(equalWeightedPortfolioReturn.values) for x in range(10000)]
+#        output = np.append(output, [date, var1, var5, es1, es5, 1 + real_return[activeAssets].mean()])
 
-        var1 = np.percentile(draw, 1)
-        var5 = np.percentile(draw, 5)
-        es1 = np.mean(np.extract(draw < var1, draw))
-        es5 = np.mean(np.extract(draw < var5, draw))
-
-        output = np.append(output, [day, var1, var5, es1, es5, 1 + real_return[activeAssets].mean()])
-
-    out_df = pd.DataFrame(output.reshape((len(output) / 6, 6)),
-                          columns=['Date', 'Var1', 'Var5', 'ES1', 'ES5', 'Real Values'])
+#    out_df = pd.DataFrame(output.reshape((len(output) / 6, 6)),
+#                          columns=['Date', 'Var1', 'Var5', 'ES1', 'ES5', 'Real Values'])
+    print "Done"
+    exit()
     out_df.to_csv('benchmark_model.csv')
 
     return
@@ -476,6 +497,8 @@ def NetworkModel(trainingData, start, end, memory, saveSimulations=False):
 
 
 if __name__ == "__main__":
+    print BerkowitzTest(pd.read_csv('berkowiz_bench2.csv',index_col=0,header=None,names=['perc','obs']))
+    exit()
     # try:
     df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
     print "data loaded", time.time() - t0
@@ -485,13 +508,16 @@ if __name__ == "__main__":
 #    res.index = pd.to_datetime(res.index, format='%d-%m-%Y')
 
 
-    retS = pd.read_csv('rSeries.csv', index_col=0)
+    #benchmarkModel(df,saveSimulations=True)
+    #exit()
+
+    retS = pd.read_csv('rSeries_benchmark.csv', index_col=0)
     retS.index = pd.to_datetime(retS.index, format='%Y-%m-%d')
 
-    berkowizTest(retS,_genDailyReturns(df))
+    generateBerkowizData(retS,_genDailyReturns(df))
+    exit()
 
-
-#    ESFormalTest(es=res['bnch_ES5'], var=res['bnch_VaR5'], alpha=0.05, data=df, name='bnchES5p')
+    ESFormalTest(es=res['bnch_ES5'], var=res['bnch_VaR5'], alpha=0.05, data=df, name='bnchES5p')
 
 
     #NetworkModel(trainingData=df, start='20121227', end='20150101', memory=100, saveSimulations=True)
