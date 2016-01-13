@@ -16,7 +16,6 @@ import sys
 from functools import partial
 import multiprocessing as mp
 from scipy.stats import expon
-import theoreticalfigures
 from decimal import Decimal
 
 if hasattr(sys, 'getwindowsversion'):
