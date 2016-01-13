@@ -482,13 +482,13 @@ def NetworkModel(trainingData, start, end, memory, saveSimulations=False):
             returnSeries.index = [date]
             returnSeries.to_csv('rSeries_nwrk.csv',mode="a",header=False)
 
-        var1 = np.percentile(returnSeries, 1)
-        var5 = np.percentile(returnSeries, 5)
-        es1 = np.mean(np.extract(returnSeries < var1, returnSeries))
-        es5 = np.mean(np.extract(returnSeries < var5, returnSeries))
+        #var1 = np.percentile(returnSeries, 1)
+        #var5 = np.percentile(returnSeries, 5)
+        #es1 = np.mean(np.extract(returnSeries < var1, returnSeries))
+        #es5 = np.mean(np.extract(returnSeries < var5, returnSeries))
 
-        results.loc[date] = [var1, var5, es1, es5]
-        results.to_csv('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv")
+        #results.loc[date] = [var1, var5, es1, es5]
+        #results.to_csv('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv")
         print time.time() - dStart
 
 
