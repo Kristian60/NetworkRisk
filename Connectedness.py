@@ -18,6 +18,7 @@ import multiprocessing as mp
 from scipy.stats import expon
 import theoreticalfigures
 from decimal import Decimal
+import pickle
 
 
 if hasattr(sys, 'getwindowsversion'):
@@ -35,7 +36,7 @@ pd.set_option('display.max_columns', 300)
 pd.set_option('display.width', 3000)
 
 
-def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
+def EstimateVAR(data, H, sparse_method=False, GVD_output=True):
     """
 
     :param data: A numpy array of log returns
@@ -71,7 +72,7 @@ def EstimateVAR(data, H, sparse_method=False, GVD_output=False):
     return pd.DataFrame(GVD), SIGMA, _ma_rep, results.resid
 
 
-def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True, report_traces=False, report_marginalDist=False,
+def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True, report_traces=False, report_individual_traces = False, report_marginalDist=False,
                   graph_distribution=False):
     '''
 
@@ -121,6 +122,9 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True, report_tra
             if report_traces:
                 dailyTraces.append(simValues.sum(axis=1) / 17)
 
+            if report_individual_traces:
+                dailyTraces.append(simValues)
+
             if report_marginalDist:
                 marginalReturn.append(simValues[-1, :])
 
@@ -128,6 +132,11 @@ def BootstrapMult(resid, marep, nIterations, dummy=False, decay=True, report_tra
 
     if report_traces:
         return np.array(dailyTraces)
+
+    if report_individual_traces:
+        output = open('data.pkl', 'wb')
+        pickle.dump(dailyTraces, output)
+        output.close()
     if report_marginalDist:
         theoreticalfigures.graph_marginalDist(marginalReturn, resid.columns)
     if graph_distribution:
@@ -460,18 +469,11 @@ def NetworkModel(trainingData, start, end, memory, saveSimulations=False):
     timerStart = time.time()
 
     accReturnSeries = pd.DataFrame([])
-    f = open('sReturn.csv','w')
 
     for date in results.index:
         dStart = time.time()
         print date
-        f = open("log.txt", "w")
-        f.write('start: ' + str(start) + '\n')
-        f.write('end: ' + str(end) + '\n')
-        f.write('now: ' + str(date.strftime('%Y%m%d')) + '\n')
-        f.close()
         dateMemory = date - datetime.timedelta(days=memory)
-
         df = trainingData[dateMemory:date].dropna(axis=1, how='any')
         df = df.dropna(axis=1, how='any')
         con, sigma, marep, resid = EstimateVAR(df, H=15)
@@ -480,7 +482,7 @@ def NetworkModel(trainingData, start, end, memory, saveSimulations=False):
         if saveSimulations:
             returnSeries = pd.DataFrame([returnSeries]).apply(np.round,decimals=5)
             returnSeries.index = [date]
-            returnSeries.to_csv('rSeries.csv',mode="a",header=False)
+            returnSeries.to_csv('rSeries_nwrk.csv',mode="a",header=False)
 
         var1 = np.percentile(returnSeries, 1)
         var5 = np.percentile(returnSeries, 5)
@@ -497,38 +499,36 @@ def NetworkModel(trainingData, start, end, memory, saveSimulations=False):
 
 
 if __name__ == "__main__":
-    print BerkowitzTest(pd.read_csv('berkowiz_bench2.csv',index_col=0,header=None,names=['perc','obs']))
-    exit()
-    # try:
-    df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
-    print "data loaded", time.time() - t0
-    df.index = pd.to_datetime(df.index)
+    #print BerkowitzTest(pd.read_csv('berkowiz_bench2.csv',index_col=0,header=None,names=['perc','obs']))
+    #exit()
+    try:
+        df = pd.read_csv('data/TData9313_final6.csv', sep=",", index_col=0)
+        print "data loaded", time.time() - t0
+        df.index = pd.to_datetime(df.index)
 
 #    res = pd.read_csv('resultstest.csv', index_col='Date')
 #    res.index = pd.to_datetime(res.index, format='%d-%m-%Y')
 
-
+        NetworkModel(df,'19941227','20150101',100,saveSimulations=True)
     #benchmarkModel(df,saveSimulations=True)
     #exit()
 
-    retS = pd.read_csv('rSeries_benchmark.csv', index_col=0)
-    retS.index = pd.to_datetime(retS.index, format='%Y-%m-%d')
+    #retS = pd.read_csv('rSeries_benchmark.csv', index_col=0)
+    #retS.index = pd.to_datetime(retS.index, format='%Y-%m-%d')
 
-    generateBerkowizData(retS,_genDailyReturns(df))
-    exit()
-
-    ESFormalTest(es=res['bnch_ES5'], var=res['bnch_VaR5'], alpha=0.05, data=df, name='bnchES5p')
+    #generateBerkowizData(retS,_genDailyReturns(df))
+    #ESFormalTest(es=res['bnch_ES5'], var=res['bnch_VaR5'], alpha=0.05, data=df, name='bnchES5p')
 
 
     #NetworkModel(trainingData=df, start='20121227', end='20150101', memory=100, saveSimulations=True)
 
-    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
-                'Ireren er færdig')
-    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
-                'Ireren er færdig')
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
+                    'Ireren er færdig')
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
+                    'Ireren er færdig')
 
-    # except:
-    #    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
-    #                'Ireren har fejlet')
-    #    mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
-    #                'Ireren har fejlet')
+    except:
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'holden750@gmail.com',
+                    'Ireren har fejlet')
+        mailer.send('dailyResults_' + time.strftime("%Y%m%d", time.gmtime()) + ".csv", 'thorup.dk@gmail.com',
+                    'Ireren har fejlet')
