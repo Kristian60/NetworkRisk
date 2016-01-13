@@ -18,8 +18,6 @@ import multiprocessing as mp
 from scipy.stats import expon
 import theoreticalfigures
 from decimal import Decimal
-import pickle
-
 
 if hasattr(sys, 'getwindowsversion'):
     it = 100
